@@ -1112,7 +1112,12 @@ export function SecondaryToolbar({
   const buildPaletteCommands = (): PaletteCommand[] => {
     // A key of your own is shown where the command's usual key would be.
     const ownKeys = readCustomShortcuts();
-    return buildAllPaletteCommands().map((command) => {
+    // The simple mode's lists (a CourseWare lesson's, or the defaults) apply here as in the ribbon: no way round them by search.
+    const hiddenTools = simpleMode
+      ? new Set([...leftTools.slice(4), ...combineTools, ...modifyTools, ...arrangeTools].map((tool) => tool.id).filter((id) => !simpleModeKeepsTool(id)))
+      : null;
+    const kept = (id: string) => !hiddenTools || (!hiddenTools.has(id) && !(id.startsWith("shape-") && !simpleModeKeepsShape(id.slice(6))));
+    return buildAllPaletteCommands().filter((command) => kept(command.id)).map((command) => {
       const shown = ownKeys[command.id] ? { ...command, shortcut: ownKeys[command.id].combo } : command;
       return historyViewActive && !HISTORY_VIEW_COMMANDS.has(command.id) ? { ...shown, enabled: false } : shown;
     });

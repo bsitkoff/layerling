@@ -15,7 +15,7 @@ The CourseWare side is tracked in the private CourseWare repo, issue #1540. Tuto
 | `components/LayerlingEditor.tsx` | Hands its command runner (the one the MCP connection uses) to the bridge |
 | `app/page.tsx`, `app/layout.tsx` | Hook call, no start page or home button in the embed, boot script |
 | `components/AppFooter.tsx` | The embed's only link out: **Source** (AGPL-3.0 section 13) |
-| `app/courseware.css` | Source link style; empty ribbon sections hidden in the embed (kept out of `globals.css`, which a theme is generated from) |
+| `app/courseware.css` | Source link style; empty ribbon sections hidden; a compact shape panel (small Solid/Hole card; no Wrap around a cylinder, Surface texture, texture mask or Save-as-default) so Length, Width and Height fit at 1366×768 |
 | `apps/web/public/_headers`, `.assetsignore`, `wrangler.jsonc` | Cloudflare hosting |
 | `scripts/generate-service-worker.mjs` | Skips the two Cloudflare files in the offline cache |
 
@@ -49,7 +49,7 @@ Binary fields are `ArrayBuffer`s; send them as transferables.
 | `request-submission` | `requestId`, `include3mf?`, `checkPrint?` | Packs the open design and answers with `submission` or `submission-error`. |
 | `review` | `lyl`, `title?` | Grading and peer review: opens a submitted file as a throwaway copy. It never becomes a lesson's design, and the previous review copy is deleted. Send `limits` too if the reviewer should see more or fewer tools. Don't send `request-submission` in this mode. |
 
-`tools` and `shapes` take an array of ids or `"all"`; leaving them out means the simple-mode defaults. The ids are ribbon tool ids and shape catalogue ids. The defaults and examples are `SIMPLE_MODE_TOOLS` and `SIMPLE_MODE_SHAPES` in `lib/simpleMode.ts`. The clipboard group, Shapes, and File are always shown. A section whose tools are all filtered out disappears.
+`tools` and `shapes` take an array of ids or `"all"`; leaving them out means the simple-mode defaults. The lists apply everywhere a tool can be reached in the simple mode: the ribbon, the built-in keys (group Ctrl+G, bundle Ctrl+B, ungroup Ctrl+Shift+G, align L, mirror M, fillet B, chamfer Shift+B, drop D), custom keys, and the right-click menu, whose tool entries use these ids too (`SIMPLE_MODE_MENU_TOOLS`: also `cutOut`, `punch`, `hollow`, `offset`, `deleteFace`, `carry`, ...). The Ctrl+K command search does not open in the simple mode at all (upstream). The ids are ribbon tool ids and shape catalogue ids. The defaults and examples are `SIMPLE_MODE_TOOLS` and `SIMPLE_MODE_SHAPES` in `lib/simpleMode.ts`. The clipboard group, Shapes, and File are always shown. A section whose tools are all filtered out disappears.
 
 ### Editor → CourseWare
 

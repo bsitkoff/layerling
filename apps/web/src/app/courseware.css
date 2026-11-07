@@ -20,3 +20,43 @@
 html[data-courseware-embed="on"] .toolbar-section:has(> .toolbar-section-tools:empty) {
   display: none;
 }
+
+/*
+ * The shape panel inside a lesson. On a 1366x768 Chromebook, Length, Width and Height must be on screen without scrolling.
+ * So: a compact Solid/Hole card, and none of the advanced cards a lesson never asks for. Their headers are found by the ids
+ * they control, so ShapeInspector.tsx stays as upstream wrote it.
+ */
+html[data-courseware-embed="on"] .shape-state-card {
+  gap: 10px;
+  margin: 6px 10px 8px;
+  padding: 8px 12px;
+}
+html[data-courseware-embed="on"] .shape-state-card button {
+  grid-auto-flow: column;
+  justify-content: center;
+  gap: 10px;
+}
+html[data-courseware-embed="on"] .shape-state-card button .key-hint {
+  display: inline;
+  margin-left: 4px;
+}
+html[data-courseware-embed="on"] .shape-state-card .check-property {
+  margin-top: 0;
+}
+html[data-courseware-embed="on"] .large-solid-swatch,
+html[data-courseware-embed="on"] .large-hole-swatch {
+  width: 36px;
+  height: 36px;
+  border-width: 3px;
+  border-radius: 8px;
+}
+/* Wrap around a cylinder, Surface texture, and the texture-mask card. */
+html[data-courseware-embed="on"] .property-card:has(> .property-card-header[aria-controls^="cylinder-wrap-"]),
+html[data-courseware-embed="on"] .property-card:has(> .property-card-header[aria-controls^="surface-texture-"]),
+html[data-courseware-embed="on"] .property-card:not([data-help-section-all]):has(> .property-list.cylinder-wrap-body > label.select-property:first-child) {
+  display: none;
+}
+/* "Save as default" and "Reset defaults" change this browser's settings for every later design: not a lesson's business. */
+html[data-courseware-embed="on"] .property-defaults-actions {
+  display: none;
+}

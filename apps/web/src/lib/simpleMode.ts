@@ -73,6 +73,32 @@ export function simpleModeKeepsShape(id: string) {
   return (shapeOverride ?? SIMPLE_MODE_SHAPES).has(id);
 }
 
+/**
+ * Right-click menu entries that are tools (their menu keys). In the simple mode they follow the same lists as the ribbon,
+ * so a lesson that hides a tool hides it there too. Everything else in the menu (copy, hide, lock, solid/hole, ...) stays.
+ */
+export const SIMPLE_MODE_MENU_TOOLS: ReadonlySet<string> = new Set([
+  "group", "ungroup", "cutOut", "punch", "separateParts", "chamfer", "fillet", "hollow", "offset", "deleteFace",
+  "holePattern", "faceTool", "supportRib", "stencilBridges", "align", "mirror", "scalePercent", "simplify", "makeExact",
+  "drop", "carry",
+]);
+
+export function simpleModeKeepsMenuItem(key: string) {
+  return !SIMPLE_MODE_MENU_TOOLS.has(key) || simpleModeKeepsTool(key);
+}
+
+/** The built-in keys that run a ribbon tool, as lib/commandKeywords.ts COMMAND_SHORTCUTS writes them. */
+const KEYED_TOOLS = ["group", "bundle", "ungroup", "align", "mirror", "fillet", "chamfer", "drop"] as const;
+
+/** The ribbon tool a key press would run although the simple mode hides it, or null. `combo` is comboFromKeyPress's spelling. */
+export function simpleModeHiddenToolOfKey(combo: string | null, shortcuts: Readonly<Record<string, string>>): string | null {
+  if (!combo) return null;
+  for (const id of KEYED_TOOLS) {
+    if (shortcuts[id] === combo && !simpleModeKeepsTool(id)) return id;
+  }
+  return null;
+}
+
 /** The simple mode runs when it is chosen, or when nothing is chosen and the server suggested it; a fixed server setting wins over both. */
 export function resolveSimpleMode(choice: SimpleModeChoice | null, server: "on" | "always" | null): boolean {
   if (server === "always") return true;

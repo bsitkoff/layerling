@@ -1,7 +1,9 @@
 import { strToU8, zipSync } from "fflate";
 import { afterEach, describe, expect, it } from "vitest";
 import { designHashOfLyl, parseCoursewareMessage } from "@/lib/coursewareBridge";
-import { setSimpleModeLists, simpleModeKeepsShape, simpleModeKeepsTool, SIMPLE_MODE_SHAPES, SIMPLE_MODE_TOOLS } from "@/lib/simpleMode";
+import { COMMAND_SHORTCUTS } from "@/lib/commandKeywords";
+import { comboFromKeyPress } from "@/lib/customShortcuts";
+import { setSimpleModeLists, simpleModeHiddenToolOfKey, simpleModeKeepsMenuItem, simpleModeKeepsShape, simpleModeKeepsTool, SIMPLE_MODE_SHAPES, SIMPLE_MODE_TOOLS } from "@/lib/simpleMode";
 
 const envelope = { source: "courseware-cad", version: 1 };
 
@@ -61,6 +63,39 @@ describe("lesson tool lists in the simple mode", () => {
     expect(simpleModeKeepsShape("anything")).toBe(true);
     setSimpleModeLists(null, null);
     expect(simpleModeKeepsShape("box")).toBe(SIMPLE_MODE_SHAPES.has("box"));
+  });
+});
+
+describe("no way round a lesson's tool list", () => {
+  afterEach(() => setSimpleModeLists(null, null));
+  const press = (key: string, modifiers: { ctrlKey?: boolean; shiftKey?: boolean } = {}) =>
+    comboFromKeyPress({ key, code: `Key${key.toUpperCase()}`, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, ...modifiers } as KeyboardEvent);
+
+  it("blocks the built-in key of a hidden ribbon tool and lets the others through", () => {
+    setSimpleModeLists(["undo", "redo", "group"], ["box"]);
+    expect(simpleModeHiddenToolOfKey(press("m"), COMMAND_SHORTCUTS)).toBe("mirror");
+    expect(simpleModeHiddenToolOfKey(press("b", { shiftKey: true }), COMMAND_SHORTCUTS)).toBe("chamfer");
+    expect(simpleModeHiddenToolOfKey(press("b", { ctrlKey: true }), COMMAND_SHORTCUTS)).toBe("bundle");
+    expect(simpleModeHiddenToolOfKey(press("g", { ctrlKey: true }), COMMAND_SHORTCUTS)).toBeNull();
+    expect(simpleModeHiddenToolOfKey(press("z", { ctrlKey: true }), COMMAND_SHORTCUTS)).toBeNull();
+    expect(simpleModeHiddenToolOfKey(null, COMMAND_SHORTCUTS)).toBeNull();
+  });
+
+  it("knows the key of every tool it guards", () => {
+    for (const id of ["group", "bundle", "ungroup", "align", "mirror", "fillet", "chamfer", "drop"]) expect(COMMAND_SHORTCUTS[id]).toBeTruthy();
+  });
+
+  it("keeps the right-click menu's everyday entries and drops the tools the lesson hides", () => {
+    setSimpleModeLists(["undo", "fillet"], ["box"]);
+    expect(simpleModeKeepsMenuItem("copy")).toBe(true);
+    expect(simpleModeKeepsMenuItem("hole")).toBe(true);
+    expect(simpleModeKeepsMenuItem("hide")).toBe(true);
+    expect(simpleModeKeepsMenuItem("fillet")).toBe(true);
+    expect(simpleModeKeepsMenuItem("chamfer")).toBe(false);
+    expect(simpleModeKeepsMenuItem("punch")).toBe(false);
+    expect(simpleModeKeepsMenuItem("mirror")).toBe(false);
+    expect(simpleModeKeepsMenuItem("drop")).toBe(false);
+    expect(simpleModeKeepsMenuItem("carry")).toBe(false);
   });
 });
 

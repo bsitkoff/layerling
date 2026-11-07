@@ -178,6 +178,9 @@ import { AppFooter } from "@/components/AppFooter";
 import { useFileAccept } from "@/lib/fileAccept";
 import { exportLylProject, LYL_CREATED_WITH_VERSION, LYL_MEDIA_TYPE, lylThumbnailFiles } from "@/lib/lylProject";
 import { isCoursewareEmbed, registerCoursewareCommandRunner } from "@/lib/coursewareBridge";
+import { getSimpleMode, simpleModeHiddenToolOfKey, simpleModeKeepsMenuItem } from "@/lib/simpleMode";
+import { COMMAND_SHORTCUTS } from "@/lib/commandKeywords";
+import { comboFromKeyPress } from "@/lib/customShortcuts";
 import { projectThumbnailPngBytes } from "@/lib/backupDownload";
 import { isBuildMessage, reportWorkerBuild } from "@/lib/buildStamp";
 import { ensureLylFileWritable, forgetLylFile, forgetStlFile, linkedLylFile, linkedStlFile, lylFileAccessSupported, pickLylFileToOpen, pickLylFileToSave, pickStlFileToSave, rememberLylFile, rememberStlFile, writeLylFile, type LylFileHandle } from "@/lib/lylFileAccess";
@@ -17142,6 +17145,12 @@ export function LayerlingEditor({
         return;
       }
 
+      // The simple mode (a CourseWare lesson's tool list) hides a tool in the ribbon; its key does nothing then either.
+      if (getSimpleMode() && simpleModeHiddenToolOfKey(comboFromKeyPress(event), COMMAND_SHORTCUTS)) {
+        event.preventDefault();
+        return;
+      }
+
       if (splitSession) {
         return;
       }
@@ -18341,7 +18350,7 @@ export function LayerlingEditor({
           x={shapeContextMenu.x}
           y={shapeContextMenu.y}
           label={shapeContextMenu.listing ? t("contextMenu.selectOtherLabel") : t("contextMenu.label")}
-          items={shapeContextMenuItems()}
+          items={getSimpleMode() ? shapeContextMenuItems().filter((item) => simpleModeKeepsMenuItem(item.key)) : shapeContextMenuItems()}
           onClose={closeShapeContextMenu}
         />
       ) : null}
