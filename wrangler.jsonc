@@ -1,0 +1,15 @@
+// CourseWare's copy of layerling: the static export served as Worker static assets at cad.cscourseware.org.
+// No secrets here, ever: this fork is public (AGPL-3.0). Deploy steps: docs/courseware-bridge.md.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "layerling-cad",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "apps/web/.next-export",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  },
+  "routes": [{ "pattern": "cad.cscourseware.org", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false
+}

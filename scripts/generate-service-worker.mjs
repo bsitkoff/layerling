@@ -43,6 +43,8 @@ export function precachePaths(relativeFiles) {
   for (const file of relativeFiles) {
     const path = "/" + file.split(sep).join("/");
     if (path.endsWith(".php")) continue;
+    // Cloudflare Workers static assets read these two and never serve them (CourseWare fork, wrangler.jsonc).
+    if (path === "/_headers" || path === "/.assetsignore") continue;
     if (path.endsWith(".map")) continue;
     // version.json is what an open page asks for to learn that a new version arrived: never stored.
     if (path === "/sw.js" || path === "/version.json" || path === "/index.txt" || path === "/robots.txt" || path === "/sitemap.xml") continue;

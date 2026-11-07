@@ -12,6 +12,7 @@ import { InstallAppHint } from "@/components/InstallAppHint";
 import { TabletHint } from "@/components/TabletHint";
 import { PenHoverTips } from "@/components/PenHoverTips";
 import { SupportNudge } from "@/components/SupportNudge";
+import { COURSEWARE_SOURCE_URL, isCoursewareEmbed } from "@/lib/coursewareBridge";
 import { supportCardEnabled, supportLink, type SupportSettings } from "@/lib/supportLink";
 
 export { SOURCE_CODE_URL };
@@ -122,7 +123,13 @@ export function AppFooter({
   }, []);
 
   // The footer is all links out of the program: the project, the forum, the release notes, the support page (#695).
-  if (simpleMode) return null;
+  if (simpleMode) {
+    // AGPL-3.0 section 13: a modified copy served over a network offers its source. The CourseWare embed is simple mode with no
+    // footer, so it keeps this one small link to the fork it was built from.
+    return variant === "editor" && isCoursewareEmbed() ? (
+      <a className="courseware-source-link" href={COURSEWARE_SOURCE_URL} target="_blank" rel="noreferrer">Source</a>
+    ) : null;
+  }
 
   return (
     <>

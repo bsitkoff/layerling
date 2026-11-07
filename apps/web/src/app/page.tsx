@@ -76,6 +76,7 @@ import { readTape, writeTape } from "@/lib/tapeStore";
 import { useFileAccept } from "@/lib/fileAccept";
 import { dropBackupTarget, lylFileAccessSupported, onLylFilesLaunched, pickBackupTarget, pickFilesToImport, rememberLylFile, writeBackupTarget, type LylFileHandle } from "@/lib/lylFileAccess";
 import { exportLylProject, importLylProject, inspectLylProjectPackage, LYL_CREATED_WITH_VERSION, LYL_MEDIA_TYPE, withLylProjectName, withLylThumbnail } from "@/lib/lylProject";
+import { useCoursewareEmbed } from "@/lib/useCoursewareEmbed";
 import { relieveOverFineCadMeshes, type RemeshCadBrep } from "@/lib/cadMeshRelief";
 import { backupDesignAlreadyThere, backupEntryPaths, backupFileName, backupFolderPaths, backupNamePrefix, backupThumbnailPath, unpackBackupFolders, isBackupFileName, createBackupWriter, unpackBackup, zipHoldsDesigns } from "@/lib/projectBackup";
 import { CUSTOM_SHAPES_FOLDER } from "@/lib/customShapesServer";
@@ -2683,6 +2684,17 @@ export default function Home() {
 
   const deleteProject = (projectId: string) => deleteProjects([projectId]);
 
+  // Inside a CourseWare lesson the start page never shows: one design per lesson opens straight away (lib/coursewareBridge.ts).
+  const coursewareEmbedded = useCoursewareEmbed({
+    mounted,
+    activeProjectId,
+    projectExists: (projectId) => readProjects().some((project) => project.id === projectId),
+    openProject: (projectId) => openEditor(projectId),
+    openLylBytes: (bytes, fileName) => openLylProjectFromFile(new File([bytes], fileName, { type: LYL_MEDIA_TYPE })),
+    createBlank: (name) => createAndOpenProject(name),
+    deleteProjects,
+  });
+
   const emptyProjectPrompt = view === "dashboard" && emptyProjectPromptId ? projects.find((project) => project.id === emptyProjectPromptId) ?? null : null;
 
   const removeEmptyProject = () => {
@@ -2933,7 +2945,7 @@ export default function Home() {
           event.currentTarget.value = "";
         }}
       />
-      {view === "dashboard" ? (
+      {view === "dashboard" && coursewareEmbedded ? <EditorLoadingSkeleton /> : view === "dashboard" ? (
         <Dashboard
           dashboardSection={dashboardSection}
           dashboardNotice={dashboardNotice}
@@ -3059,7 +3071,7 @@ export default function Home() {
               initialWorkspace={activeProject?.workspace ?? DEFAULT_WORKPLANE_WORKSPACE}
               initialPlacementElevation={activeProject?.placementElevation ?? 0}
               initialPlacementWorkplane={activeProject?.placementWorkplane}
-              onHome={openDashboard}
+              onHome={coursewareEmbedded ? undefined : openDashboard}
               onOpenLylProjectFile={openLylProjectFromFile}
               onSaveSharedProject={saveActiveProjectToShared}
               onSaveExportFile={saveExportFileToShared}

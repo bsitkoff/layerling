@@ -177,6 +177,7 @@ import { buildSketchRevolveMesh, DEFAULT_SKETCH_REVOLVE_SETTINGS, normalizeSketc
 import { AppFooter } from "@/components/AppFooter";
 import { useFileAccept } from "@/lib/fileAccept";
 import { exportLylProject, LYL_CREATED_WITH_VERSION, LYL_MEDIA_TYPE, lylThumbnailFiles } from "@/lib/lylProject";
+import { isCoursewareEmbed, registerCoursewareCommandRunner } from "@/lib/coursewareBridge";
 import { projectThumbnailPngBytes } from "@/lib/backupDownload";
 import { isBuildMessage, reportWorkerBuild } from "@/lib/buildStamp";
 import { ensureLylFileWritable, forgetLylFile, forgetStlFile, linkedLylFile, linkedStlFile, lylFileAccessSupported, pickLylFileToOpen, pickLylFileToSave, pickStlFileToSave, rememberLylFile, rememberStlFile, writeLylFile, type LylFileHandle } from "@/lib/lylFileAccess";
@@ -15798,6 +15799,13 @@ export function LayerlingEditor({
   useEffect(() => {
     executeMcpCommandRef.current = executeMcpCommand;
   }, [executeMcpCommand]);
+
+  // CourseWare embed (lib/coursewareBridge.ts): submissions are packed with the same commands the MCP connection uses.
+  useEffect(() => {
+    if (!isCoursewareEmbed()) return;
+    registerCoursewareCommandRunner((command) => executeMcpCommandRef.current?.(command) ?? Promise.reject(new Error("The editor is not open yet.")));
+    return () => registerCoursewareCommandRunner(null);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") {

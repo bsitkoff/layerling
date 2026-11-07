@@ -4,6 +4,7 @@ import "./dashboard.css";
 import "./historyView.css";
 import "./notes.css";
 import "./tape.css";
+import "./courseware.css";
 import "./myShapes.css";
 import "./shapeLibrary.css";
 import "./attachments.css";
@@ -23,6 +24,7 @@ import { LANGUAGE_BOOT_SCRIPT } from "@/lib/i18n";
 import { LANGUAGES } from "@/lib/languages";
 import { SHAPE_COLORS_BOOT_SCRIPT } from "@/lib/shapeColors";
 import { SIMPLE_MODE_BOOT_SCRIPT } from "@/lib/simpleMode";
+import { COURSEWARE_EMBED_BOOT_SCRIPT } from "@/lib/coursewareBridge";
 import { TOOLBAR_SIZE_BOOT_SCRIPT } from "@/lib/toolbarSize";
 import { VIEW_CUBE_POSITION_BOOT_SCRIPT } from "@/lib/viewCubePosition";
 
@@ -115,6 +117,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: DOM_MUTATION_GUARD_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: TOOLBAR_SIZE_BOOT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: SIMPLE_MODE_BOOT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: COURSEWARE_EMBED_BOOT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: SHAPE_COLORS_BOOT_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: VIEW_CUBE_POSITION_BOOT_SCRIPT }} />
       </head>

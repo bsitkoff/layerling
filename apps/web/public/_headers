@@ -1,0 +1,5 @@
+# Cloudflare Workers static assets (wrangler.jsonc): only CourseWare may frame this copy of layerling.
+/*
+  Content-Security-Policy: frame-ancestors https://cscourseware.org
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

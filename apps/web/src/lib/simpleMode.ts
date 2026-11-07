@@ -36,12 +36,41 @@ export const SIMPLE_MODE_SHAPES: ReadonlySet<string> = new Set([
   "text", "nameTag", "star", "heart",
 ]);
 
+/**
+ * Lists that replace the two above, set by an embedding page (lib/coursewareBridge.ts): a set keeps exactly those ids,
+ * "all" keeps everything, null goes back to the defaults. `simpleModeListsVersion` changes with them, for re-rendering.
+ */
+let toolOverride: ReadonlySet<string> | "all" | null = null;
+let shapeOverride: ReadonlySet<string> | "all" | null = null;
+let listsVersion = 0;
+const listListeners = new Set<() => void>();
+
+export function setSimpleModeLists(tools: readonly string[] | "all" | null | undefined, shapes: readonly string[] | "all" | null | undefined) {
+  toolOverride = tools === "all" ? "all" : tools ? new Set(tools) : null;
+  shapeOverride = shapes === "all" ? "all" : shapes ? new Set(shapes) : null;
+  listsVersion += 1;
+  listListeners.forEach((listener) => listener());
+}
+
+export function getSimpleModeListsVersion() {
+  return listsVersion;
+}
+
+export function subscribeToSimpleModeLists(listener: () => void) {
+  listListeners.add(listener);
+  return () => {
+    listListeners.delete(listener);
+  };
+}
+
 export function simpleModeKeepsTool(id: string) {
-  return SIMPLE_MODE_TOOLS.has(id);
+  if (toolOverride === "all") return true;
+  return (toolOverride ?? SIMPLE_MODE_TOOLS).has(id);
 }
 
 export function simpleModeKeepsShape(id: string) {
-  return SIMPLE_MODE_SHAPES.has(id);
+  if (shapeOverride === "all") return true;
+  return (shapeOverride ?? SIMPLE_MODE_SHAPES).has(id);
 }
 
 /** The simple mode runs when it is chosen, or when nothing is chosen and the server suggested it; a fixed server setting wins over both. */
@@ -99,8 +128,15 @@ export function setSimpleMode(on: boolean) {
 
 /** What the server suggests (`on`) or fixes (`always`), as the start of the page learns it. */
 export function setServerSimpleMode(setting: ServerSetting) {
-  serverSetting = setting;
+  serverSetting = embedLocked ? "always" : setting;
   publish();
+}
+
+/** Inside a CourseWare lesson the simple mode is always on, whatever the server or the browser says later. */
+let embedLocked = false;
+export function lockSimpleModeForEmbed() {
+  embedLocked = true;
+  setServerSimpleMode("always");
 }
 
 export function isSimpleModeFixedByServer() {

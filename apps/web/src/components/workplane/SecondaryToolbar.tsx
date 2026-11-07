@@ -11,7 +11,7 @@ import { wheelNextValue } from "@/lib/wheelValueStep";
 import type { ComponentType, ReactNode, SVGProps } from "react";
 import { t, type MessageKey } from "@/lib/i18n";
 import { useLanguage } from "@/lib/useLanguage";
-import { useSimpleMode } from "@/lib/useSimpleMode";
+import { useSimpleMode, useSimpleModeListsVersion } from "@/lib/useSimpleMode";
 import { simpleModeKeepsShape, simpleModeKeepsTool } from "@/lib/simpleMode";
 import { normalizePolygonSides, normalizeStarInnerPercent, SKETCH_POLYGON_MAX_SIDES, SKETCH_POLYGON_MIN_SIDES, SKETCH_STAR_MAX_INNER_PERCENT, SKETCH_STAR_MIN_INNER_PERCENT } from "@/lib/sketchPrimitives";
 import { SketchBoltCircleIcon, SketchEllipseIcon, SketchHalfCircleIcon, SketchPieSliceIcon, ToolbarAlignIcon, ToolbarAttachmentsIcon, ToolbarBuildPlatesIcon, ToolbarCenterOnWorkplaneIcon, ToolbarChamferIcon, ToolbarCaretDownIcon, ToolbarCookieCutterIcon, ToolbarFlexiIcon, ToolbarLidIcon,
@@ -740,6 +740,8 @@ export function SecondaryToolbar({
     setVisibilityOpen(false);
   }, [historyViewActive]);
   const simpleMode = useSimpleMode();
+  // Re-render when an embedding page changes which tools and shapes the simple mode keeps.
+  useSimpleModeListsVersion();
   // Groups the window has no room for fold into one button that opens on hover or a tap (Stefan, 29.10.2026). The simple
   // mode keeps every tool in sight, as it always did, and so does the pin in the title row, for whoever wants it so.
   const [ribbonPinned, setRibbonPinned] = useState(false);

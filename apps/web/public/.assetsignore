@@ -1,0 +1,2 @@
+# Not served by the Cloudflare Worker: the PHP store is for plain web hosting with PHP, which a Worker is not.
+store.php
