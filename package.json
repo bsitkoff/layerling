@@ -25,6 +25,7 @@
     "typecheck": "tsc -p apps/web/tsconfig.json --noEmit",
     "test": "vitest run --config tests/vitest.config.ts",
     "test:watch": "vitest --config tests/vitest.config.ts",
+    "test:courseware": "node tests/courseware/smoke.mjs",
     "test:e2e": "vitest run --config tests/vitest.e2e.config.ts",
     "perf": "vitest run --config tests/vitest.perf.config.ts --reporter verbose",
     "icons:shapes": "vitest run --config tests/vitest.tools.config.ts tests/tools/renderShapeIcons.tool.ts",

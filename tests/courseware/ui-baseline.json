@@ -1,0 +1,98 @@
+{
+  "ribbon": [
+    {
+      "group": "clipboard",
+      "tools": [
+        "Copy",
+        "Paste",
+        "Duplicate",
+        "Delete"
+      ]
+    },
+    {
+      "group": "history",
+      "tools": [
+        "Undo",
+        "Redo"
+      ]
+    },
+    {
+      "group": "shapes",
+      "tools": [
+        "Add shape"
+      ]
+    },
+    {
+      "group": "combine",
+      "tools": [
+        "Group",
+        "Ungroup"
+      ]
+    },
+    {
+      "group": "modify",
+      "tools": [
+        "Mirror",
+        "Flexi joints",
+        "Cookie cutter",
+        "Chamfer",
+        "Fillet",
+        "Hollow",
+        "Lid"
+      ]
+    },
+    {
+      "group": "arrange",
+      "tools": [
+        "Align"
+      ]
+    },
+    {
+      "group": "manage",
+      "tools": [
+        "Export",
+        "Attachments"
+      ]
+    }
+  ],
+  "inspector": {
+    "state": [
+      "Solid (S)",
+      "Hole (H)",
+      "Transparent (T)"
+    ],
+    "cards": [
+      "Properties",
+      "Position",
+      "Rotation",
+      "Taper",
+      "Twist & Lean",
+      "Slope Along",
+      "Narrow Along"
+    ],
+    "fields": [
+      "Length",
+      "Width",
+      "Height"
+    ]
+  },
+  "menu": [
+    "Duplicate",
+    "Copy",
+    "Select multiple",
+    "Make it a hole",
+    "Chamfer",
+    "Fillet",
+    "Hollow",
+    "Mirror",
+    "Mark the centre",
+    "Mark the centre of this face",
+    "Mark the corners",
+    "Mark the edge middles",
+    "Hide",
+    "Lock",
+    "Lock shape",
+    "Onto plate…",
+    "Delete"
+  ]
+}
