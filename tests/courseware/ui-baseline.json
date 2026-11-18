@@ -30,11 +30,21 @@
       ]
     },
     {
-      "group": "modify",
+      "group": "mirrorPattern",
       "tools": [
-        "Mirror",
+        "Mirror"
+      ]
+    },
+    {
+      "group": "splitShape",
+      "tools": [
         "Flexi joints",
-        "Cookie cutter",
+        "Cookie cutter"
+      ]
+    },
+    {
+      "group": "edgesWalls",
+      "tools": [
         "Chamfer",
         "Fillet",
         "Hollow",
@@ -79,6 +89,7 @@
   "menu": [
     "Duplicate",
     "Copy",
+    "Invert selection",
     "Select multiple",
     "Make it a hole",
     "Chamfer",
@@ -90,6 +101,7 @@
     "Mark the corners",
     "Mark the edge middles",
     "Hide",
+    "Hide others",
     "Lock",
     "Lock shape",
     "Onto plate…",
