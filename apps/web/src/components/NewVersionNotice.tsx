@@ -1,6 +1,7 @@
 "use client";
 
 import { RefreshCw } from "lucide-react";
+import { isCoursewareEmbed } from "@/lib/coursewareBridge";
 import { highlightsAfter } from "@/lib/newVersionWatch";
 import { localizedText, t } from "@/lib/i18n";
 import { useLanguage } from "@/lib/useLanguage";
@@ -15,7 +16,10 @@ const RUNNING_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "";
 export function NewVersionNotice() {
   const language = useLanguage();
   const { latest, reason, later, reload, reloadAnyway, state } = useNewVersionNotice();
-  if (!latest) return null;
+  // CourseWare fork: never inside a lesson. Its "Export → LYL" advice is wrong there (work goes back to CourseWare on Submit),
+  // deploys happen outside school hours, and the next lesson load brings the new version anyway. `latest` is only set in
+  // the browser, so the embed check below never runs on the server.
+  if (!latest || isCoursewareEmbed()) return null;
   const news = highlightsAfter(RUNNING_VERSION, latest).slice(0, 4);
   return (
     <div className="new-version-notice" role="alertdialog" aria-labelledby="new-version-title" aria-describedby="new-version-body">
