@@ -1,5 +1,6 @@
 "use client";
 
+import { CLASSROOM_COPY } from "@/lib/classroomCopy";
 import { requestPersistentStorage } from "@/lib/persistentStorage";
 import { clearDesignOpening, forgetDesignOpening, markDesignOpening, takeUnfinishedOpening } from "@/lib/openingDesignGuard";
 import { keepShownSelection, localDesignKey, selectionHasStale, serverDesignKey, toggleDesignSelection } from "@/lib/designSelection";
@@ -4161,9 +4162,9 @@ function Dashboard({
             </div>
           ) : null}
           {announcements.shown && !simpleMode ? <AnnouncementCard announcement={announcements.shown} reveal={announcements.reopened} onClose={announcements.close} /> : null}
-          {whatsNew.view && !simpleMode ? <WhatsNewCard view={whatsNew.view} current={LYL_CREATED_WITH_VERSION} onClose={whatsNew.dismiss} /> : null}
-          {simpleMode ? null : <InstallAppHint />}
-          {simpleMode ? null : <TabletHint />}
+          {whatsNew.view && !simpleMode && !CLASSROOM_COPY ? <WhatsNewCard view={whatsNew.view} current={LYL_CREATED_WITH_VERSION} onClose={whatsNew.dismiss} /> : null}
+          {simpleMode || CLASSROOM_COPY ? null : <InstallAppHint />}
+          {simpleMode || CLASSROOM_COPY ? null : <TabletHint />}
           <DesignTabs tabs={designTabs} active={activeSection} onSelect={onSelectSection}>
             {activeSection === "shared" ? (
               <button className="dashboard-select dashboard-backup-button" type="button" onClick={() => onRefreshSharedProjects()} disabled={sharedProjectsLoading}>

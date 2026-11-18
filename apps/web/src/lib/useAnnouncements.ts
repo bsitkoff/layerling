@@ -1,5 +1,6 @@
 "use client";
 
+import { CLASSROOM_COPY } from "@/lib/classroomCopy";
 import { useCallback, useEffect, useState } from "react";
 import {
   activeAnnouncements,
@@ -12,7 +13,7 @@ import {
 const CLOSED_KEY = "layerling.announcementsClosed";
 
 /** NEXT_PUBLIC_ANNOUNCEMENTS=off: whoever runs an installation can keep the announcements away. */
-const SWITCHED_OFF = process.env.NEXT_PUBLIC_ANNOUNCEMENTS?.trim().toLowerCase() === "off";
+const SWITCHED_OFF = process.env.NEXT_PUBLIC_ANNOUNCEMENTS?.trim().toLowerCase() === "off" || CLASSROOM_COPY;
 
 function readClosed(): string[] {
   try {

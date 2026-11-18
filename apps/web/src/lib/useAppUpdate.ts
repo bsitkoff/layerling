@@ -1,5 +1,6 @@
 "use client";
 
+import { CLASSROOM_COPY } from "@/lib/classroomCopy";
 import { useEffect, useState } from "react";
 import { checkAppUpdate, dismissUpdate as storeDismissUpdate, isUpdateDismissed, type AppUpdateInfo } from "./appUpdate";
 
@@ -20,7 +21,7 @@ export function useAppUpdate(currentVersion: string) {
   const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
-    if (!asksGitHubForUpdates()) return;
+    if (CLASSROOM_COPY || !asksGitHubForUpdates()) return;
     let cancelled = false;
     setIsChecking(true);
     checkAppUpdate(currentVersion)

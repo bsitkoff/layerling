@@ -1,5 +1,6 @@
 "use client";
 
+import { CLASSROOM_COPY, OFFICIAL_SITE_URL } from "@/lib/classroomCopy";
 import { Heart, Sparkles } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { LANGUAGE_INFO, t, type Language } from "@/lib/i18n";
@@ -139,8 +140,8 @@ export function AppFooter({
 
   return (
     <>
-    {variant === "editor" ? <InstallAppHint variant="editor" /> : null}
-    {variant === "editor" ? <TabletHint variant="editor" /> : null}
+    {variant === "editor" && !CLASSROOM_COPY ? <InstallAppHint variant="editor" /> : null}
+    {variant === "editor" && !CLASSROOM_COPY ? <TabletHint variant="editor" /> : null}
     {variant === "editor" ? <PenHoverTips /> : null}
     {sponsor && supportCardEnabled(SUPPORT_SETTINGS) ? <SupportNudge href={sponsor.href} /> : null}
     <footer className={variant === "editor" ? "dashboard-legal editor-legal" : "dashboard-legal"}>
@@ -219,7 +220,7 @@ export function AppFooter({
             GitHub
           </a>,
           // Only on the start page, where the list is shown.
-          variant === "dashboard" ? (
+          variant === "dashboard" && !CLASSROOM_COPY ? (
             <a
               href="#"
               role="button"
@@ -250,6 +251,12 @@ export function AppFooter({
           ) : null,
         ])}
       </div>
+      {variant === "dashboard" && CLASSROOM_COPY ? (
+        <p className="dashboard-trademark classroom-copy-note">
+          This is a classroom copy of layerling, updated by hand. For the latest version, news and what&apos;s new, visit{" "}
+          <a href={OFFICIAL_SITE_URL} target="_blank" rel="noreferrer">layerling.com</a>.
+        </p>
+      ) : null}
       {variant === "dashboard" ? <p className="dashboard-trademark">{t("footer.trademark")}</p> : null}
     </footer>
     </>
