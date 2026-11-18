@@ -83,6 +83,9 @@ export function shapeWithParametricSource(shape: WorkplaneShape): WorkplaneShape
     slopeEnd: source.slopeEnd,
     slopeSide: source.slopeSide,
     slopeCurve: source.slopeCurve,
+    slopeFrom: source.slopeFrom,
+    sideDrop: source.sideDrop,
+    sideCurve: source.sideCurve,
     narrowEnd: source.narrowEnd,
     narrowSide: source.narrowSide,
     narrowCurve: source.narrowCurve,
@@ -625,6 +628,8 @@ export function canonicalizeShape(unrepaired: WorkplaneShape): WorkplaneShape {
     if (groupResize) next.groupResize = groupResize;
     else delete next.groupResize;
   }
+  // Only a hull keeps its parts' holes, and only when told to: false is the same as left out.
+  if (next.hullKeepHoles !== true || next.groupOperation !== "hull") delete next.hullKeepHoles;
   if (shape.sketchRevolve) {
     next.sketchRevolve = {
       startAngle: shape.sketchRevolve.startAngle,
@@ -632,6 +637,8 @@ export function canonicalizeShape(unrepaired: WorkplaneShape): WorkplaneShape {
       sides: shape.sketchRevolve.sides,
       quality: shape.sketchRevolve.quality,
       ...(shape.sketchRevolve.pitch ? { pitch: shape.sketchRevolve.pitch } : {}),
+      // Kept with the body, or a revolve set smoother came back as standard in its panel and lost it on saving (Discussion #1426).
+      ...(shape.sketchRevolve.smoothness === "fine" || shape.sketchRevolve.smoothness === "extraFine" ? { smoothness: shape.sketchRevolve.smoothness } : {}),
     };
   }
   if (shape.edgeTreatmentHistory) {
@@ -664,6 +671,12 @@ export function sketchStrokesEqual(a: SketchStroke | undefined, b: SketchStroke 
   if (a === b) return true;
   if (!a || !b) return false;
   return a.width === b.width && a.align === b.align && a.join === b.join && a.cap === b.cap;
+}
+
+/** Two lists of numbers that hold the same values (a missing list equals only a missing one). */
+function sameNumberList(a: readonly number[] | undefined, b: readonly number[] | undefined) {
+  if (!a || !b) return a === b;
+  return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
 export function workplaneShapesEqual(a: WorkplaneShape, b: WorkplaneShape) {
@@ -731,6 +744,9 @@ export function workplaneShapesEqual(a: WorkplaneShape, b: WorkplaneShape) {
     a.slopeEnd === b.slopeEnd &&
     a.slopeSide === b.slopeSide &&
     a.slopeCurve === b.slopeCurve &&
+    a.slopeFrom === b.slopeFrom &&
+    a.sideDrop === b.sideDrop &&
+    a.sideCurve === b.sideCurve &&
     a.narrowEnd === b.narrowEnd &&
     a.narrowSide === b.narrowSide &&
     a.narrowCurve === b.narrowCurve &&
@@ -749,6 +765,8 @@ export function workplaneShapesEqual(a: WorkplaneShape, b: WorkplaneShape) {
     a.gearType === b.gearType &&
     a.helixAngle === b.helixAngle &&
     a.bevelHelixAngle === b.bevelHelixAngle &&
+    a.ringRackHelixAngle === b.ringRackHelixAngle &&
+    a.ringRackHerringbone === b.ringRackHerringbone &&
     a.helixQuality === b.helixQuality &&
     a.gearProfile === b.gearProfile &&
     a.gearPressureAngle === b.gearPressureAngle &&
@@ -809,6 +827,7 @@ export function workplaneShapesEqual(a: WorkplaneShape, b: WorkplaneShape) {
     a.tubeBoreHole === b.tubeBoreHole &&
     a.hingeStyle === b.hingeStyle &&
     a.hingeConeSize === b.hingeConeSize &&
+    a.hingeSnapGrip === b.hingeSnapGrip &&
     a.hingePinDiameter === b.hingePinDiameter &&
     a.hingeLeafThickness === b.hingeLeafThickness &&
     a.hingeClearance === b.hingeClearance &&
@@ -898,6 +917,7 @@ export function workplaneShapesEqual(a: WorkplaneShape, b: WorkplaneShape) {
     a.loftOffsetX === b.loftOffsetX &&
     a.loftOffsetZ === b.loftOffsetZ &&
     a.loftWall === b.loftWall &&
+    a.loftTopWall === b.loftTopWall &&
     a.loftTwist === b.loftTwist &&
     a.loftSmooth === b.loftSmooth &&
     a.loftSegments === b.loftSegments &&
@@ -911,10 +931,15 @@ export function workplaneShapesEqual(a: WorkplaneShape, b: WorkplaneShape) {
     a.screwHoleHeadDepth === b.screwHoleHeadDepth &&
     a.screwHoleAngle === b.screwHoleAngle &&
     a.drillPointAngle === b.drillPointAngle &&
+    Boolean(a.screwHoleSlot) === Boolean(b.screwHoleSlot) &&
+    (a.screwHoleRecess ?? 0) === (b.screwHoleRecess ?? 0) &&
+    (a.screwHoleChamfer ?? 0) === (b.screwHoleChamfer ?? 0) &&
     a.portProfile === b.portProfile &&
     a.portClearance === b.portClearance &&
     a.cornerFillet === b.cornerFillet &&
+    sameNumberList(a.cornerFillets, b.cornerFillets) &&
     a.topBottomFillet === b.topBottomFillet &&
+    a.bottomFillet === b.bottomFillet &&
     a.roundedBoxQuality === b.roundedBoxQuality &&
     a.bentTubeProfile === b.bentTubeProfile &&
     a.bentTubeInnerProfile === b.bentTubeInnerProfile &&
@@ -984,6 +1009,11 @@ export function workplaneShapesEqual(a: WorkplaneShape, b: WorkplaneShape) {
     a.groupOperation === b.groupOperation &&
     a.multicolor === b.multicolor &&
     a.groupResize === b.groupResize &&
+    Boolean(a.hullKeepHoles) === Boolean(b.hullKeepHoles) &&
+    // A rib's body, a stencil bridge and a breakaway base are marked for the print check (#1633): a change there is a change.
+    a.supportRibFor === b.supportRibFor &&
+    Boolean(a.stencilBridge) === Boolean(b.stencilBridge) &&
+    Boolean(a.breakawayBase) === Boolean(b.breakawayBase) &&
     a.rotationPivot === b.rotationPivot &&
     fieldFormulasEqual(a.formulas, b.formulas) &&
     a.locked === b.locked &&

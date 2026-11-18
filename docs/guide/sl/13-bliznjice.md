@@ -15,7 +15,7 @@ Polje na vrhu okna išče po seznamu: obdrži le bližnjice, katerih stavek, sku
 
 Ne najdeš orodja? Pritisni [[Ctrl]]+[[K]] ali klikni povečevalno steklo v področju {{ui:editor.group.help}} in vpiši, kaj iščeš: orodje (»Zaokroži«, »Zrcali«), obliko (»Valj«) ali ukaz (»Izvozi«, »Razveljavi«). S smernimi tipkami izbereš, [[Enter]] izvede; deluje tudi klik na vnos.
 
-- Iskanje razume slovensko in angleško besedo ter ne razlikuje velikih in malih črk in šumnikov: »izdolbi« najde {{ui:editor.tool.hollow}}.
+- Iskanje razume slovensko in angleško besedo ter ne razlikuje velikih in malih črk in šumnikov: »izdolbi« najde {{ui:editor.tool.hollow}}. Iskanje deluje v vsaki pisavi: ime se najde tako, kot piše v jeziku vmesnika (»円柱« v japonščini). Znaki polne in polovične širine, katakana in hiragana ter naglasi veljajo za enake.
 - Vsak vnos pokaže tipke, ki naredijo isto, in področje vrstice, v katerem leži, tako se naučiš, kje je.
 - Zasivljenih vnosov trenutno ni mogoče izvesti, običajno zato, ker ni nič izbrano. Ostanejo na seznamu, da iskanje vseeno izda, kje orodje leži.
 
@@ -24,6 +24,7 @@ Navodila, ki jih bereš, imajo tudi iskalno polje, na vrhu vsake strani: vpiši 
 - Ime oblike vstavi to obliko na delovno površino, popolnoma tako kot klik v meniju oblik.
 - Pri praznem polju so zadnje uporabljeni ukazi zgoraj.
 - Ime telesa v tvojem načrtu najde to telo in ga izbere, praktično pri načrtih z mnogimi deli. Telesa se pokažejo šele, ko začneš tipkati.
+- Shranjeno obliko po meri najdeš tudi po imenu, takoj ko začneš tipkati, klik pa jo vstavi v načrt kot v podoknu oblik.
 - Deluje tudi v skicirnem načinu, tam s skicirnimi orodji.
 
 ## Lastne tipke

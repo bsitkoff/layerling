@@ -3,6 +3,7 @@ import type { CustomSnapGrid, CustomSnapGridSize, GridSize, HistoryRetentionLimi
 import { normalizeScaleForUnits } from "@/lib/measurementUnits";
 import { DEFAULT_IMPERIAL_GRID_BLOCK_PRESET, DEFAULT_METRIC_GRID_BLOCK_PRESET, DEFAULT_EDGE_LINE_COLOR, DEFAULT_LIGHT_AZIMUTH, DEFAULT_LIGHT_ELEVATION, DEFAULT_SKETCH_BACKGROUND, DEFAULT_SKETCH_GRID_COLOR, DEFAULT_SKETCH_PLATE_COLOR, DEFAULT_WORKPLANE_BACKGROUND, DEFAULT_WORKPLANE_GRID_COLOR, DEFAULT_WORKPLANE_SURFACE_COLOR, inchGridPresetMm } from "@/lib/workplaneGrid";
 import { isThreadProfile } from "@/lib/threadProfiles";
+import { MAX_TEXT_LENGTH } from "@/lib/textLength";
 import { normalizeHexColor } from "@/lib/coloredImport";
 import { normalizePlateNames } from "@/lib/buildPlateNames";
 import { TORUS_MAX_TUBE_RATIO, TORUS_MIN_TUBE_RATIO } from "@/lib/torusShape";
@@ -47,6 +48,18 @@ export function booleanTriangleLimitPreset(limit: number): BooleanTriangleLimitP
   return BOOLEAN_TRIANGLE_LIMIT_PRESETS.find((preset) => preset.limit === limit)?.id ?? null;
 }
 
+/** The hole opacity slider's range in percent (#1566); 0 stands for automatic. */
+export const HOLE_OPACITY_MIN = 10;
+export const HOLE_OPACITY_MAX = 90;
+/** What automatic means: holes as they were drawn before the slider, plain and with Show holes more clearly. */
+export const HOLE_OPACITY_AUTO = 52;
+export const HOLE_OPACITY_AUTO_STRONG = 72;
+
+/** The hole opacity in percent the view uses, with automatic resolved. */
+export function effectiveHoleOpacity(workspace: Pick<WorkplaneWorkspaceSettings, "holeOpacity" | "strongHoles">) {
+  return workspace.holeOpacity || (workspace.strongHoles ? HOLE_OPACITY_AUTO_STRONG : HOLE_OPACITY_AUTO);
+}
+
 export const DEFAULT_WORKPLANE_WORKSPACE: WorkplaneWorkspaceSettings = {
   width: 200,
   depth: 200,
@@ -65,6 +78,7 @@ export const DEFAULT_WORKPLANE_WORKSPACE: WorkplaneWorkspaceSettings = {
   edgeLines: false,
   edgeColor: DEFAULT_EDGE_LINE_COLOR,
   strongHoles: false,
+  holeOpacity: 0,
   showShadows: true,
   cameraInertia: true,
   fastMode: false,
@@ -88,12 +102,17 @@ export const DEFAULT_WORKPLANE_WORKSPACE: WorkplaneWorkspaceSettings = {
   doubleClickCentersView: true,
   objectSnap: true,
   stlAsDownload: false,
+  lylAsDownload: false,
   confirmTabClose: false,
   dimensionsAlwaysVisible: true,
   dimensionAxisColors: false,
   showRotationAngles: true,
+  showSlideArrows: true,
   startWithScrollbars: false,
+  viewBarOpensOnHover: false,
+  showStepNotices: true,
   zoomSpeed: 5,
+  panSpeed: 5,
   mouseScheme: "layerling",
   units: "Metric (Default)",
   inchFormat: "fraction",
@@ -129,6 +148,23 @@ export function orbitControlsZoomSpeed(slider: number): number {
     : DEFAULT_WORKPLANE_WORKSPACE.zoomSpeed;
   const slowest = DEFAULT_ORBIT_ZOOM_SPEED / ZOOM_SPEED_STEP ** (DEFAULT_WORKPLANE_WORKSPACE.zoomSpeed - ZOOM_SPEED_SLIDER_MIN);
   return slowest * ZOOM_SPEED_STEP ** (position - ZOOM_SPEED_SLIDER_MIN);
+}
+
+const PAN_SPEED_SLIDER_MIN = 1;
+export const PAN_SPEED_SLIDER_MAX = 9;
+/** Each pan slider step changes the rate by this factor: the left end is half the middle, the right end twice. */
+const PAN_SPEED_STEP = 2 ** (1 / 4);
+
+/**
+ * Maps the pan slider onto OrbitControls.panSpeed (#1553).
+ * At 1 the point you grab at the depth of the view's centre stays under the cursor; the middle of the
+ * slider gives that. It was fixed at 0.65 before, so the view moved slower than the mouse.
+ */
+export function orbitControlsPanSpeed(slider: number): number {
+  const position = Number.isFinite(slider)
+    ? Math.min(PAN_SPEED_SLIDER_MAX, Math.max(PAN_SPEED_SLIDER_MIN, slider))
+    : DEFAULT_WORKPLANE_WORKSPACE.panSpeed;
+  return PAN_SPEED_STEP ** (position - DEFAULT_WORKPLANE_WORKSPACE.panSpeed);
 }
 
 /**
@@ -306,6 +342,12 @@ function numberOrDefault(value: unknown, fallback: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+/** A hole's opacity in percent, 10 to 90, or 0 for automatic (#1566). */
+function holeOpacityOrAuto(value: unknown, fallback: number) {
+  const percent = Math.round(numberOrDefault(value, fallback));
+  return percent <= 0 ? 0 : Math.max(HOLE_OPACITY_MIN, Math.min(HOLE_OPACITY_MAX, percent));
+}
+
 function stringOrDefault(value: unknown, fallback: string) {
   return typeof value === "string" && value.trim() ? value : fallback;
 }
@@ -425,6 +467,17 @@ export function normalizeShapeCustomizations(value: unknown, fallback: ShapeCust
       entry.screwHoleHeadDepth = optionalShapeNumber(source.screwHoleHeadDepth, fallbackEntry?.screwHoleHeadDepth, 0.1, MAX_CUSTOM_SHAPE_DIMENSION);
       entry.screwHoleAngle = optionalShapeNumber(source.screwHoleAngle, fallbackEntry?.screwHoleAngle, 30, 150);
     }
+    if (kind === "counterbore" || kind === "countersink" || kind === "doubleCountersink") {
+      // A slotted hole and a recessed head (Discussion #1531), so a shape made through the AI bridge keeps them.
+      entry.screwHoleSlot = typeof source.screwHoleSlot === "boolean" ? source.screwHoleSlot : fallbackEntry?.screwHoleSlot;
+    }
+    if (kind === "countersink" || kind === "doubleCountersink") {
+      entry.screwHoleRecess = optionalShapeNumber(source.screwHoleRecess, fallbackEntry?.screwHoleRecess, 0, MAX_CUSTOM_SHAPE_DIMENSION);
+    }
+    if (kind === "counterbore") {
+      // A chamfer at the rim of the pocket (Discussion #1632), so a counterbore made through the AI bridge keeps it.
+      entry.screwHoleChamfer = optionalShapeNumber(source.screwHoleChamfer, fallbackEntry?.screwHoleChamfer, 0, MAX_CUSTOM_SHAPE_DIMENSION);
+    }
     if (kind === "cylinder" || kind === "counterbore" || kind === "countersink") {
       // A drill point at the bottom of a blind hole (Discussion #621); 0 or less stands for a flat bottom, so a patch can switch it back.
       entry.drillPointAngle = typeof source.drillPointAngle === "number" && source.drillPointAngle <= 0
@@ -439,8 +492,9 @@ export function normalizeShapeCustomizations(value: unknown, fallback: ShapeCust
       entry.hingeClearance = optionalShapeNumber(source.hingeClearance, fallbackEntry?.hingeClearance, 0.1, 1);
       entry.hingeAngle = optionalShapeNumber(source.hingeAngle, fallbackEntry?.hingeAngle, -180, 180);
       entry.hingePinless = typeof source.hingePinless === "boolean" ? source.hingePinless : fallbackEntry?.hingePinless;
-      entry.hingeStyle = source.hingeStyle === "cone" || source.hingeStyle === "pinless" || source.hingeStyle === "pin" || source.hingeStyle === "liftOff" ? source.hingeStyle : fallbackEntry?.hingeStyle;
+      entry.hingeStyle = source.hingeStyle === "cone" || source.hingeStyle === "pinless" || source.hingeStyle === "pin" || source.hingeStyle === "liftOff" || source.hingeStyle === "snap" ? source.hingeStyle : fallbackEntry?.hingeStyle;
       entry.hingeConeSize = optionalShapeNumber(source.hingeConeSize, fallbackEntry?.hingeConeSize, 0.6, MAX_CUSTOM_SHAPE_DIMENSION);
+      entry.hingeSnapGrip = optionalShapeNumber(source.hingeSnapGrip, fallbackEntry?.hingeSnapGrip, 0.05, 1.5);
       entry.hingeScrewHoles = optionalShapeNumber(source.hingeScrewHoles, fallbackEntry?.hingeScrewHoles, 0, 6, true);
       entry.hingeScrewDiameter = optionalShapeNumber(source.hingeScrewDiameter, fallbackEntry?.hingeScrewDiameter, 1, 12);
       entry.hingeScrewSpacing = optionalShapeNumber(source.hingeScrewSpacing, fallbackEntry?.hingeScrewSpacing, 0, MAX_CUSTOM_SHAPE_DIMENSION);
@@ -521,7 +575,7 @@ export function normalizeShapeCustomizations(value: unknown, fallback: ShapeCust
       for (const key of ["loftBottomWidth", "loftBottomDepth", "loftTopWidth", "loftTopDepth"] as const) {
         entry[key] = optionalShapeNumber(source[key], fallbackEntry?.[key], 1, MAX_CUSTOM_SHAPE_DIMENSION);
       }
-      for (const key of ["loftBottomCorner", "loftTopCorner", "loftWall"] as const) {
+      for (const key of ["loftBottomCorner", "loftTopCorner", "loftWall", "loftTopWall"] as const) {
         entry[key] = optionalShapeNumber(source[key], fallbackEntry?.[key], 0, MAX_CUSTOM_SHAPE_DIMENSION / 2);
       }
       entry.loftTwist = optionalShapeNumber(source.loftTwist, fallbackEntry?.loftTwist, -360, 360);
@@ -577,6 +631,7 @@ export function normalizeShapeCustomizations(value: unknown, fallback: ShapeCust
     if (kind === "roundedBox") {
       entry.cornerFillet = optionalShapeNumber(source.cornerFillet, fallbackEntry?.cornerFillet, 0, MAX_CUSTOM_SHAPE_DIMENSION / 2);
       entry.topBottomFillet = optionalShapeNumber(source.topBottomFillet, fallbackEntry?.topBottomFillet, 0, MAX_CUSTOM_SHAPE_DIMENSION / 2);
+      entry.bottomFillet = optionalShapeNumber(source.bottomFillet, fallbackEntry?.bottomFillet, 0, MAX_CUSTOM_SHAPE_DIMENSION / 2);
       entry.roundedBoxQuality = optionalShapeNumber(source.roundedBoxQuality, fallbackEntry?.roundedBoxQuality, 1, 32, true);
     }
     if (kind === "bentTube") {
@@ -596,7 +651,7 @@ export function normalizeShapeCustomizations(value: unknown, fallback: ShapeCust
       entry.bentTubeQuality = optionalShapeNumber(source.bentTubeQuality, fallbackEntry?.bentTubeQuality, 12, 96, true);
     }
     if (kind === "text") {
-      entry.text = optionalShapeText(source.text, fallbackEntry?.text, 24);
+      entry.text = optionalShapeText(source.text, fallbackEntry?.text, MAX_TEXT_LENGTH);
       entry.font = source.font === undefined
         ? fallbackEntry?.font
         : ["Multilanguage", "Sans", "Serif", "Script", "Monospace", "Rounded", "Stencil"].includes(source.font)
@@ -607,6 +662,8 @@ export function normalizeShapeCustomizations(value: unknown, fallback: ShapeCust
       entry.textCurved = typeof source.textCurved === "boolean" ? source.textCurved : fallbackEntry?.textCurved;
       entry.textInward = typeof source.textInward === "boolean" ? source.textInward : fallbackEntry?.textInward;
       entry.textFlipped = typeof source.textFlipped === "boolean" ? source.textFlipped : fallbackEntry?.textFlipped;
+      // Kerning (#1297): new texts have it on, so only an "off" saved as a default means anything; true and false are both kept.
+      entry.textKerning = typeof source.textKerning === "boolean" ? source.textKerning : fallbackEntry?.textKerning;
       entry.textRadius = optionalShapeNumber(source.textRadius, fallbackEntry?.textRadius, 5, 500);
       entry.textSize = optionalShapeNumber(source.textSize, fallbackEntry?.textSize, 0.5, 200);
     }
@@ -661,6 +718,16 @@ export function normalizeShapeCustomizations(value: unknown, fallback: ShapeCust
         : ["hex", "torx", "phillips", "slot", "robertson", "none"].includes(source.threadDrive)
           ? source.threadDrive
           : fallbackEntry?.threadDrive;
+      // makeShapeFromAsset reads these too, but they were dropped here, so the AI bridge and the shape defaults never
+      // got a tapered thread, a head of its own size, a drive or a collar through (same ranges as the .lyl check).
+      // false is kept, so a change through the AI bridge can switch the taper off again.
+      entry.threadTaper = typeof source.threadTaper === "boolean" ? source.threadTaper : fallbackEntry?.threadTaper;
+      entry.threadHeadHeight = optionalShapeNumber(source.threadHeadHeight, fallbackEntry?.threadHeadHeight, 0, 480);
+      entry.threadHeadDiameter = optionalShapeNumber(source.threadHeadDiameter, fallbackEntry?.threadHeadDiameter, 0, 640);
+      entry.threadDriveSize = optionalShapeNumber(source.threadDriveSize, fallbackEntry?.threadDriveSize, 0, 640);
+      entry.threadDriveDepth = optionalShapeNumber(source.threadDriveDepth, fallbackEntry?.threadDriveDepth, 0, 640);
+      entry.threadCollarHeight = optionalShapeNumber(source.threadCollarHeight, fallbackEntry?.threadCollarHeight, 0, 640);
+      entry.threadCollarDiameter = optionalShapeNumber(source.threadCollarDiameter, fallbackEntry?.threadCollarDiameter, 0, 640);
     }
     if (kind === "gear") {
       entry.teeth = optionalShapeNumber(source.teeth, fallbackEntry?.teeth, MIN_GEAR_TEETH, MAX_GEAR_TEETH, true);
@@ -678,6 +745,12 @@ export function normalizeShapeCustomizations(value: unknown, fallback: ShapeCust
       entry.gearPressureAngle = optionalShapeNumber(source.gearPressureAngle, fallbackEntry?.gearPressureAngle, 14.5, 30);
       entry.gearBacklash = optionalShapeNumber(source.gearBacklash, fallbackEntry?.gearBacklash, 0, 2);
       entry.gearRim = optionalShapeNumber(source.gearRim, fallbackEntry?.gearRim, 0.5, 60);
+      // Slanted teeth on a ring gear or a rack (Discussion #1627).
+      entry.ringRackHelixAngle = optionalShapeNumber(source.ringRackHelixAngle, fallbackEntry?.ringRackHelixAngle, -45, 45);
+      // false is kept, so a change through the AI bridge can switch the herringbone teeth off again.
+      entry.ringRackHerringbone = typeof source.ringRackHerringbone === "boolean" ? source.ringRackHerringbone : fallbackEntry?.ringRackHerringbone;
+      // A spiral bevel gear's angle, as the inspector and the .lyl check take it.
+      entry.bevelHelixAngle = optionalShapeNumber(source.bevelHelixAngle, fallbackEntry?.bevelHelixAngle, -45, 45);
     }
     if (kind === "hirth") {
       entry.teeth = optionalShapeNumber(source.teeth, fallbackEntry?.teeth, MIN_HIRTH_TEETH, MAX_HIRTH_TEETH, true);
@@ -755,6 +828,38 @@ export function handleDimensionLimit(
     ? Math.max(workspace.width, workspace.depth)
     : printerHeight ?? Math.max(workspace.width, workspace.depth);
   return Math.max(appDefault, plate, current);
+}
+
+/**
+ * How far the height handle pulls a body (Discussion #1558). The printer's height holds only while the body's height stands
+ * upright; a box laid on its side by placing it on the face of a lying rail has its height along the plate, and stopped at
+ * the printer's 200 mm while it was pulled along a rail twice as long. Tilted, it reaches as far as the plate does too.
+ */
+export function heightHandleLimit(
+  workspace: Pick<WorkplaneWorkspaceSettings, "width" | "depth" | "shapeCustomizations">,
+  kind: ShapeKind,
+  currentHeight: number,
+  printerHeight: number | null | undefined,
+  upright: boolean,
+) {
+  const height = handleDimensionLimit(workspace, kind, 180, "height", currentHeight, printerHeight);
+  return upright ? height : Math.max(height, handleDimensionLimit(workspace, kind, 220, "across", currentHeight));
+}
+
+/**
+ * How large a typed width, depth or height may make a body (Discussion #1444). Only the handles
+ * stop at the plate; a number typed in is taken as it is, for several bodies at once as for one,
+ * so a part larger than the plate (36 in for a bench) is a matter of typing it. A custom size
+ * limit for the shape still holds, but never shrinks a body that is already larger.
+ */
+export function typedDimensionLimit(
+  workspace: Pick<WorkplaneWorkspaceSettings, "shapeCustomizations">,
+  kind: ShapeKind,
+  currentSize: number,
+) {
+  const custom = workspace.shapeCustomizations[kind]?.maxDimension;
+  if (custom === undefined) return Number.POSITIVE_INFINITY;
+  return Math.max(custom, Number.isFinite(currentSize) ? currentSize : 0);
 }
 
 export function normalizeSnapGrid(value: unknown, fallback: GridSize = DEFAULT_SNAP_GRID): GridSize {
@@ -841,6 +946,7 @@ export function normalizeWorkspaceSettings(value: unknown, fallback: WorkplaneWo
     edgeLines: booleanOrDefault(candidate.edgeLines, fallback.edgeLines),
     edgeColor: colorOrDefault(candidate.edgeColor, fallback.edgeColor),
     strongHoles: booleanOrDefault(candidate.strongHoles, fallback.strongHoles),
+    holeOpacity: holeOpacityOrAuto(candidate.holeOpacity, fallback.holeOpacity),
     showShadows: booleanOrDefault(candidate.showShadows, fallback.showShadows),
     cameraInertia: booleanOrDefault(candidate.cameraInertia, fallback.cameraInertia),
     fastMode: booleanOrDefault(candidate.fastMode, fallback.fastMode),
@@ -869,12 +975,17 @@ export function normalizeWorkspaceSettings(value: unknown, fallback: WorkplaneWo
     doubleClickCentersView: booleanOrDefault(candidate.doubleClickCentersView, fallback.doubleClickCentersView),
     objectSnap: booleanOrDefault(candidate.objectSnap, fallback.objectSnap),
     stlAsDownload: booleanOrDefault(candidate.stlAsDownload, fallback.stlAsDownload),
+    lylAsDownload: booleanOrDefault(candidate.lylAsDownload, fallback.lylAsDownload),
     confirmTabClose: booleanOrDefault(candidate.confirmTabClose, fallback.confirmTabClose),
     dimensionsAlwaysVisible: booleanOrDefault(candidate.dimensionsAlwaysVisible, fallback.dimensionsAlwaysVisible),
     dimensionAxisColors: booleanOrDefault(candidate.dimensionAxisColors, fallback.dimensionAxisColors),
     showRotationAngles: booleanOrDefault(candidate.showRotationAngles, fallback.showRotationAngles),
+    showSlideArrows: booleanOrDefault(candidate.showSlideArrows, fallback.showSlideArrows),
     startWithScrollbars: booleanOrDefault(candidate.startWithScrollbars, fallback.startWithScrollbars),
+    viewBarOpensOnHover: booleanOrDefault(candidate.viewBarOpensOnHover, fallback.viewBarOpensOnHover),
+    showStepNotices: booleanOrDefault(candidate.showStepNotices, fallback.showStepNotices),
     zoomSpeed: numberOrDefault(candidate.zoomSpeed, fallback.zoomSpeed),
+    panSpeed: numberOrDefault(candidate.panSpeed, fallback.panSpeed),
     mouseScheme: candidate.mouseScheme === "slicer" ? "slicer" : candidate.mouseScheme === "layerling" ? "layerling" : fallback.mouseScheme,
     units,
     inchFormat: candidate.inchFormat === "decimal" ? "decimal" : "fraction",

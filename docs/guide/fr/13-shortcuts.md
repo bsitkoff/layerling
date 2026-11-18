@@ -15,7 +15,7 @@ Le champ en haut de la fenêtre cherche dans la liste : il ne garde que les racc
 
 Vous ne trouvez pas d'outil ? Appuyez sur [[Ctrl]]+[[K]] ou cliquez sur la loupe dans la zone {{ui:editor.group.help}}, puis tapez ce que vous recherchez : un outil ("congé", "miroir"), une forme ("cylindre") ou une commande ("exporter", "annuler"). Déplacez-vous avec les touches fléchées et appuyez sur [[Enter]], ou cliquez sur l'entrée.
 
-- La recherche comprend aussi bien le mot anglais que le mot allemand et ignore les majuscules et les trémas : "aushoehlen" trouve {{ui:editor.tool.hollow}}.
+- La recherche comprend aussi bien le mot anglais que le mot allemand et ignore les majuscules et les trémas : "aushoehlen" trouve {{ui:editor.tool.hollow}}. La recherche fonctionne avec toutes les écritures : un nom se trouve tel qu'il est écrit dans la langue de l'interface (« 円柱 » en japonais). Les caractères pleine chasse et demi-chasse, le katakana et le hiragana ainsi que les accents comptent pour identiques.
 - Chaque entrée affiche les touches qui font la même chose et le groupe du ruban dans lequel elle se trouve, afin que vous sachiez où elle se trouve.
 - Les entrées grisées ne peuvent pas être exécutées pour le moment, principalement parce que rien n'est sélectionné. Ils restent dans la liste afin que la recherche vous indique toujours où se trouve l'outil.
 
@@ -23,6 +23,7 @@ Le guide que vous lisez dispose également d'un champ de recherche, en haut de c
 - Le nom d'une forme ajoute cette forme au plan de travail, tout comme si vous cliquez dessus dans le menu des formes.
 - Avec un champ vide, la recherche répertorie les commandes que vous avez utilisées en dernier en haut.
 - Le nom d'un corps dans votre conception trouve ce corps et le sélectionne, ce qui facilite une conception comportant de nombreuses pièces. Les corps n'apparaissent qu'une fois que vous tapez.
+- Une forme personnalisée que vous avez enregistrée se trouve aussi par son nom dès que vous tapez, et un clic l'insère dans le motif comme dans le panneau des formes.
 - Cela fonctionne également en mode esquisse, avec les outils d'esquisse.
 
 ## Vos propres touches

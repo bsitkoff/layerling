@@ -63,7 +63,7 @@ const DEPTH_MESSAGE = `Folders go ${CUSTOM_SHAPE_FOLDER_DEPTH} levels deep; this
 
 export interface CustomShapesOptions {
   sharedProjectsEnabled: boolean;
-  setNotice: (message: string, busy?: boolean) => void;
+  setNotice: (message: string, busy?: boolean, action?: { label: string; run: () => void } | null) => void;
   commitShapes: (next: WorkplaneShape[], nextSelection?: string | string[] | null, message?: string) => void;
   setProjectAssets: (assets: ProjectAsset[]) => void;
   downloadBlob: (fileName: string, blob: Blob) => Promise<void>;
@@ -77,6 +77,8 @@ export interface CustomShapesOptions {
   snapGridRef: { current: LylExport["snapGrid"] };
   projectInfoRef: { current: { projectId: string | null } };
   placementWorkplaneRef: { current: PlacementWorkplane };
+  /** Where a shape put in without a spot lands: the middle of the active build plate (#1514). */
+  newShapeOrigin?: (workplane: PlacementWorkplane) => PlacementPoint;
 }
 
 /**
@@ -239,7 +241,7 @@ export function useCustomShapes(options: CustomShapesOptions) {
     const restored = await importLylProject(await readCustomShapePackage(id));
     if (projectInfoRef.current.projectId !== sourceProjectId) throw new Error(t("status.pasteCancelled"));
     if (restored.shapes.length === 0) throw new Error(t("status.insertDesignEmpty", { name }));
-    const placed = placeCustomShape(restored, point ?? placementWorkplaneRef.current.origin, notesRef.current);
+    const placed = placeCustomShape(restored, point ?? options.newShapeOrigin?.(placementWorkplaneRef.current) ?? placementWorkplaneRef.current.origin, notesRef.current);
     return addInsertedBodies(restored.assets, placed, t("status.myShapeInserted", { name }));
   }, [commitShapes]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -368,11 +370,18 @@ export function useCustomShapes(options: CustomShapesOptions) {
     setNotice(t("status.myShapeFolderDeleted", { name }));
   }, [refreshMyShapes, refreshServerShapes]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const backUpMyShapes = useCallback(async () => {
+  const backUpMyShapes = useCallback(async (asDownload = false): Promise<void> => {
     // Where it goes is asked first, while the click still counts: in Chrome and Edge a save dialog that remembers its
     // folder, elsewhere a download, as for the backups of the start page.
-    const target = await pickBackupTarget(myShapesBackupFileName(new Date()));
-    if (!target) return;
+    const target = await pickBackupTarget(myShapesBackupFileName(new Date()), asDownload);
+    if (!target) {
+      // On some PCs the dialog hands back no file for any folder: the button makes the backup a download.
+      setNotice(t("status.saveNothingChosen"), true, {
+        label: t("status.saveAsDownload"),
+        run: () => void backUpMyShapes(true).catch((error) => setNotice(error instanceof Error ? localizedError(error.message) : String(error))),
+      });
+      return;
+    }
     const entries = await customShapesBackupEntries();
     const count = entries.length - 1;
     if (count <= 0) {

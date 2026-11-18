@@ -15,7 +15,7 @@ El cuadro de la parte superior de la ventana busca en la lista: deja solo los at
 
 ¿No encuentras una herramienta? Pulsa [[Ctrl]]+[[K]] o haz clic en la lupa del grupo {{ui:editor.group.help}} y escribe lo que buscas: una herramienta («redondeo», «reflejar»), una forma («cilindro») o un comando («exportar», «deshacer»). Muévete con las flechas y pulsa [[Intro]], o haz clic en la entrada.
 
-- La búsqueda entiende igual la palabra en castellano que en inglés o en alemán, y no distingue mayúsculas, tildes ni diéresis: «aushoehlen» encuentra {{ui:editor.tool.hollow}}.
+- La búsqueda entiende igual la palabra en castellano que en inglés o en alemán, y no distingue mayúsculas, tildes ni diéresis: «aushoehlen» encuentra {{ui:editor.tool.hollow}}. La búsqueda funciona con cualquier escritura: un nombre se encuentra tal como aparece en el idioma de la interfaz («円柱» en japonés). Los caracteres de ancho completo y de medio ancho, el katakana y el hiragana, y los acentos cuentan como iguales.
 - Cada entrada muestra las teclas que hacen lo mismo y el grupo de la cinta en el que está, para que aprendas dónde se encuentra.
 - Las entradas en gris no se pueden ejecutar en ese momento, casi siempre porque no hay nada seleccionado. Siguen en la lista para que la búsqueda te diga igualmente dónde está la herramienta.
 
@@ -23,6 +23,7 @@ La guía que estás leyendo también tiene un cuadro de búsqueda, arriba en cad
 - El nombre de una forma añade esa forma a la zona de trabajo, igual que si hicieras clic en ella en el menú de formas.
 - Con el campo vacío, la búsqueda muestra arriba los últimos comandos que has usado.
 - El nombre de un cuerpo de tu diseño encuentra ese cuerpo y lo selecciona, algo muy útil en un diseño con muchas piezas. Los cuerpos solo aparecen cuando empiezas a escribir.
+- Una forma personalizada que guardaste también se encuentra por su nombre en cuanto escribes, y un clic la inserta en el diseño como en el panel de formas.
 - También funciona en el modo de boceto, con las herramientas de boceto.
 
 ## Tus propias teclas

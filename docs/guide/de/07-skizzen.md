@@ -57,6 +57,7 @@ Punkte nacheinander anklicken.
 ::: Eine Linie schließen oder beenden
 Um den Umriss zu schließen, klickst du am Ende wieder auf den ersten Punkt.
 Die Linienkette beendest du, ohne den Umriss zu schließen, mit einem Rechtsklick ohne Bewegung oder einem Doppelklick auf den letzten Punkt.
+Wechselst du mitten in der Kette zu {{ui:sketch.line}}, {{ui:sketch.bezier}} oder {{ui:sketch.smooth}}, geht die Linie am letzten Punkt weiter.
 => Ein Körper entsteht nur aus einem **geschlossenen** Umriss.
 :::
 
@@ -269,6 +270,8 @@ Beim Rotieren zeichnest du den halben Querschnitt **links von der Achse**, die i
 
 Ein gedrehter Körper ist ein exakter Körper wie ein ausgezogener: Er nimmt Fasen und Verrundungen an, und du kannst ihn aushöhlen, für einen Becher oder eine Vase. Ein Körper, der mit einer älteren layerling-Fassung gedreht wurde, ist ein Netz; öffne {{ui:inspector.editSketch}} und schließe ihn neu ab, dann ist er exakt. Ein Umriss, der über die Achse hinausreicht, lässt sich nicht exakt bauen und wird wie bisher ein Netz.
 
+**Glattere runde Flächen: {{ui:prop.revolveSmoothness}}.** Ein exakter Drehkörper wird für Ansicht, Export und Druck in kleine ebene Facetten geteilt, und an einem großen Topf können sie im Druck sichtbar werden. Wähle den Körper und stelle im Eigenschaftenfeld {{ui:prop.revolveSmoothness}} auf {{ui:prop.revolveSmoothnessFine}} oder {{ui:prop.revolveSmoothnessExtraFine}}: Die runden Flächen werden feiner geteilt, um den Preis von mehr Dreiecken und einem langsameren Entwurf. Eine Schraubenlinie oder ein Netz-Drehkörper hat dafür {{ui:prop.sides}}.
+
 **Ein durchgehender Strang: {{ui:prop.pitch}}.** Eine Drehung macht aus dem Umriss geschlossene Ringe. Wähle den gedrehten Körper aus und gib ihm in den Eigenschaften eine {{ui:prop.pitch}} über 0, die Höhe, um die er pro Umdrehung steigt, dann windet sich der Umriss als Schraubenlinie: ein durchgehender Strang wie Filament auf einer Spule oder eine Spirale. Aus {{ui:prop.sweep}} wird dann {{ui:prop.turns}}, bis 200; eine negative Zahl windet linksgängig. Windungen, die enger liegen, als der Umriss hoch ist, verschmelzen zu einem Körper, also geht auch ein voller Kern mit feiner Steigung. Eine Schraubenlinie wird als Netz gebaut, Verrunden, Fasen und Aushöhlen gehen darauf nicht; halte {{ui:prop.sides}} bei vielen Windungen niedrig. Eine Steigung von 0 macht wieder Ringe.
 
 ## Entlang eines Pfades ziehen
@@ -301,7 +304,7 @@ Die Kontur stellst du auch ein, ohne die Skizze zu öffnen: In den Eigenschaften
 
 {{ui:prop.sketchSilhouette}} lässt alle Umrisse weg, die in einem anderen liegen: Löcher und was in ihnen liegt. Übrig bleibt nur der äußere Umriss. Zusammen mit {{ui:prop.sketchFill.outside}} wird daraus ein Ausstecher: Importiere ein SVG zweimal, einmal mit Silhouette als Fläche für den Boden und einmal mit Silhouette und 1 bis 2 mm Kontur außen als Wand. Den Schalter gibt es auch im Fenster {{ui:sketch.stroke}} im Skizzenmodus.
 
-Verrundungen und Fasen an den Kanten gehen beim Neubau verloren, wie beim Bearbeiten der Skizze.
+Verrundungen und Fasen an den Kanten gehen beim Neubau verloren, wie beim Bearbeiten der Skizze. {{ui:inspector.taper}} und {{ui:inspector.twist}} bleiben; eine Verjüngung wächst oder schrumpft mit dem Umriss.
 
 ## Schräge Wände, für Stempel
 
@@ -351,6 +354,7 @@ Den Baum neben einem Haus, eine Figur vor unruhigem Hintergrund – wo keine Far
 | [[Strg]]+[[A]] | alle Punkte und Linien auswählen |
 | [[Strg]]+[[I]] | {{ui:sketch.addImage}} |
 | [[Umschalt]] | beim Zeichnen: Linie in 15°-Schritten einrasten; beim Ziehen: Bewegung auf eine Achse beschränken |
+| [[Alt]] | beim Setzen oder Ziehen eines Punkts: nur aufs Raster, ohne Einrasten an Ecken und Mitten |
 | Ziffer, [[<]], [[Tab]], [[Enter]] | beim Zeichnen: Länge und Winkel der nächsten Linie eintippen und setzen |
 | [[R]] | geschlossene Skizze um 45° drehen |
 | [[Strg]]+[[L]] | gewählten Umriss oder das Vorlagenbild sperren oder entsperren |

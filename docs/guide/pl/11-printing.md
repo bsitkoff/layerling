@@ -15,7 +15,7 @@ Dzieją się trzy rzeczy:
 - W narożniku płaszczyzny roboczej pojawiają się nazwa drukarki i jej przestrzeń robocza. Jeśli napis przeszkadza, wyłącz go przez {{ui:workspace.showPlateLabels}} w sekcji {{ui:workspace.workplane}}. Dotyczy to też nazwy projektu z przodu po lewej.
 - layerling **ostrzega**, gdy coś się nie mieści.
 
-Profile drukarek pochodzą z OrcaSlicera, więc są takie same, jakie zna Twój slicer. Jeśli wolisz pracować bez drukarki, wybierz {{ui:workspace.printerNone}}. Rozmiar płaszczyzny roboczej możesz też ustawić ręcznie.
+Większość profili drukarek pochodzi z OrcaSlicera. Jeśli wolisz pracować bez drukarki, wybierz {{ui:workspace.printerNone}}. Rozmiar płaszczyzny roboczej możesz też ustawić ręcznie.
 
 Drukarki delta, takie jak FLSun, SeeMeCNC czy Anycubic Predator, drukują na okrągłym stole. Przy jednej z nich płaszczyzna robocza też jest okrągła i tak szeroka jak stół, a bryła jest za duża, gdy tylko wystaje poza krawędź. Okrągłą bryłę mierzy się po jej własnym obrysie, a nie po otaczającym ją prostopadłościanie, więc zmieści się nawet walec prawie tak szeroki jak stół.
 
@@ -52,10 +52,10 @@ Z jak stromymi nawisami radzi sobie Twoja drukarka, ustawiasz w ustawieniach w s
 
 Część drukowana pochylona na krawędzi, na przykład pod kątem 45°, często nie potrzebuje podpór: jej ściany są wystarczająco strome. Stoi jednak na wąskiej krawędzi i może się przewrócić. {{ui:supportRib.title}} ją trzyma: pod jej dolną ścianą w małej odległości stoi cienkie żebro na owalnej stopie, a maleńkie mostki przytrzymują część. Najpierw obróć część na krawędź i postaw ją na stole.
 
-1. Zaznacz część i kliknij {{ui:supportRib.title}} w grupie {{ui:editor.group.modify}} na wstążce, kliknij część prawym przyciskiem albo znajdź narzędzie przez [[Ctrl]]+[[K]].
+1. Zaznacz część i kliknij {{ui:supportRib.title}} w grupie {{ui:editor.section.splitShape}} na wstążce, kliknij część prawym przyciskiem albo znajdź narzędzie przez [[Ctrl]]+[[K]].
 2. Kliknij dolną ścianę tam, gdzie ma stanąć żebro. Ściana musi być skierowana w dół, nachylona od 15° do 75° i sięgać do stołu; żebro biegnie od miejsca kliknięcia prosto w dół ściany. Jeśli dolna krawędź części jest zaokrąglona lub sfazowana, ściana może kończyć się do 3 mm nad stołem: kliknij płaską ścianę nad zaokrągleniem.
 3. Ustaw {{ui:supportRib.nozzle}}, {{ui:supportRib.layerHeight}} i {{ui:supportRib.firstLayer}} tak jak w slicerze. Żebro ma grubość dwóch ścieżek dyszy, szczelina do części pół ścieżki; każdy mostek ma szerokość jednej ścieżki i wysokość dokładnie jednej warstwy i leży na warstwie wydruku, więc slicer drukuje go jako jedną cienką ścieżkę, która czysto się odłamuje. {{ui:supportRib.height}} określa, jak wysoko żebro sięga po ścianie (na początku do połowy), a {{ui:supportRib.bridgeSpacing}}, jak daleko od siebie są mostki, w całych warstwach.
-4. W {{ui:supportRib.more}} grubość, szczelinę, szerokość mostków i grubość stopy można ustawić ręcznie (do tego czasu wynikają z dyszy i warstw), a także szerokość stopy i zaokrąglenia przy stopie i u góry.
+4. W {{ui:supportRib.more}} grubość, szczelinę, szerokość mostków i grubość stopy można ustawić ręcznie (do tego czasu wynikają z dyszy i warstw), a także szerokość stopy i zaokrąglenia przy stopie i u góry. Gdy {{ui:supportRib.bridgeGap}} jest większa od 0, mostki nie sięgają już w głąb części, lecz kończą się tyle przed nią, mierząc w warstwie: slicer drukuje wtedy każdy jako osobną ścieżkę, która trzyma część dociśniętą linią i odchodzi bez śladu (pół linii, 0,2 mm przy dyszy 0,4 mm, to dobry początek). Zwiększ przy tym {{ui:supportRib.gap}}, aby mostki nadal przechodziły przez jej część.
 5. {{ui:supportRib.apply}} dodaje żebro. Z {{ui:supportRib.bundle}} (na początku włączone) żebro i część są zgrupowane: poruszają się razem i trafiają do slicera jako dwie bryły obok siebie, w wydruku połączone mostkami.
 
 Żebro jest bryłą siatkową: żeby je zmienić, usuń je i utwórz ponownie. Każde kliknięcie tworzy jedno żebro; po kolejne kliknij {{ui:supportRib.repick}} albo powtórz je przez {{ui:editor.tool.array}}. Żebro nie może nigdzie wchodzić w część, a część musi stać na stole - inaczej okno powie dlaczego. Ustawienia zostają w tej przeglądarce na następne żebro.
@@ -71,6 +71,8 @@ Część drukowana pochylona na krawędzi, na przykład pod kątem 45°, często
 ## Luz twojej drukarki: test pasowania
 
 Każda drukarka drukuje otwory trochę mniejsze, a sworznie trochę grubsze, niż są narysowane, każda o własną wartość, więc luz potrzebny dwóm wydrukowanym częściom jest na początku zgadywaniem. Zmierz go raz: w ustawieniach w sekcji {{ui:workspace.workplane}} przycisk {{ui:workspace.fitTestMake}} kładzie na stole test pasowania. To płytka 60 × 20 × 4 mm z siedmioma otworami na jeden sworzeń 5 mm, każdy narysowany jako 5 mm plus dwa razy 0,05, 0,10, 0,15, 0,20, 0,25, 0,30 lub 0,40 mm, z wypukłą wartością obok, oraz sam sworzeń 5 mm, stojący obok płytki z małą fazką u góry. Składa się ze zwykłych kształtów, więc drukuje się razem z resztą stołu, bez podpór.
+
+Na drukarce, której stół jeździ w przód i w tył, wysoki, cienki sworzeń może się chwiać, odkleić albo wyjść falisty u podstawy, z brimem czy bez. Przed utworzeniem testu pasowania zaznacz {{ui:workspace.fitTestBase}}: sworzeń stoi wtedy na małej płytce 10 mm, która trzyma się stołu. Nie dotyka ścianki gniazda, tylko stoi na małym występie w jego dnie; po wydruku zegnij go w tę i z powrotem, a się odłamie.
 
 Wydrukuj go tak, jak leży, a potem wsuwaj sworzeń fazką do przodu w otwory, zaczynając od najciaśniejszego. **Najciaśniejszy otwór, w którym sworzeń jeszcze się obraca,** wyznacza luz twojej drukarki. Wpisz jego liczbę w polu {{ui:workspace.printerPlay}} albo kliknij ją wśród wartości pod polem. Luz podaje się na stronę, w milimetrach, a przeglądarka pamięta go dla wszystkich projektów; puste pole oznacza, że nie zmierzono.
 Przy kilku drukarkach wybierz najpierw w {{ui:workspace.printer}} tę, na której drukujesz: każda drukarka ma własny luz, a nowe elementy zaczynają od luzu drukarki ustawionej dla projektu. Drukarka bez własnego luzu używa luzu ustawionego, gdy nie była wybrana żadna drukarka.
@@ -89,7 +91,7 @@ Od tej pory nowe użycia zaczynają od luzu zamiast od wbudowanej wartości: {{u
 
 ![Tacka, której prawa ścianka ma tylko 0,6 mm: Sprawdź wydruk maluje ją na czerwono i podaje w oknie.](shot:print-check)
 
-{{ui:printCheck.show}} przy wierszu przenosi tam kamerę; zaznacza części w powietrzu, te z małym stykiem i otwarte siatki, a przy nawisach włącza **Pokaż nawisy**. Bryły, które się nakładają, są sprawdzane połączone, tak jak łączy je slicer. Jeśli zmienisz projekt, gdy okno jest otwarte, pojawi się {{ui:printCheck.stale}}; kliknij to albo {{ui:printCheck.checkAgain}}. [[Esc]] zamyka okno. W projekcie nic się nie zmienia. AI wykonuje to samo sprawdzenie przez `layerling_check_print`.
+{{ui:printCheck.show}} przy wierszu przenosi tam kamerę; zaznacza części w powietrzu, te z małym stykiem i otwarte siatki, a przy nawisach włącza **Pokaż nawisy**. Bryły, które się nakładają, są sprawdzane połączone, tak jak łączy je slicer. Jeśli zmienisz projekt, gdy okno jest otwarte, pojawi się {{ui:printCheck.stale}}; kliknij to albo {{ui:printCheck.checkAgain}}. [[Esc]] zamyka okno. W projekcie nic się nie zmienia. AI wykonuje to samo sprawdzenie przez `layerling_check_print`. Okno tylko sprawdza, niczego nie drukuje ani nie zapisuje: aby drukować, wyeksportuj projekt do slicera przyciskiem {{ui:editor.export}} w grupie {{ui:editor.group.file}}. {{ui:printCheck.openExport}} w oknie zamyka sprawdzanie i otwiera eksport.
 
 ## Gdy wszystko gotowe
 

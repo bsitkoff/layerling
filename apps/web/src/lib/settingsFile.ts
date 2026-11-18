@@ -1,6 +1,10 @@
 import { normalizeAppThemePreference, type AppThemePreference } from "@/lib/appTheme";
 import { CUSTOM_SHORTCUTS_STORAGE_KEY, normalizeCustomShortcuts, type CustomShortcuts } from "@/lib/customShortcuts";
 import { normalizePrinterPlay, PRINTER_PLAYS_STORAGE_KEY } from "@/lib/printerPlay";
+import { normalizeRibbonHidden, RIBBON_HIDDEN_STORAGE_KEY } from "@/lib/ribbonHidden";
+import { normalizeRibbonOrder, RIBBON_ORDER_STORAGE_KEY } from "@/lib/ribbonOrder";
+import { normalizeRibbonFold, RIBBON_FOLD_STORAGE_KEY, type RibbonFoldMap } from "@/lib/ribbonFold";
+import { normalizeRibbonToolOrder, RIBBON_TOOL_ORDER_STORAGE_KEY, type RibbonToolOrder } from "@/lib/ribbonToolOrder";
 import { normalizeShapeColors, SHAPE_COLORS_STORAGE_KEY } from "@/lib/shapeColors";
 import { normalizeToolbarSize, TOOLBAR_SIZE_STORAGE_KEY, type ToolbarSize } from "@/lib/toolbarSize";
 import { normalizeViewCubePosition, VIEW_CUBE_POSITION_STORAGE_KEY, type ViewCubePosition } from "@/lib/viewCubePosition";
@@ -31,6 +35,14 @@ export type BrowserSettings = {
    * saved before they existed leaves the keys of this browser alone.
    */
   customShortcuts?: CustomShortcuts;
+  /** Groups and buttons taken out of the ribbon (Discussion #1519); like the keys, read only from a file that has them. */
+  ribbonHidden?: string[];
+  /** The order of the ribbon's groups (Discussion #1519, #1502); read only from a file that has it. */
+  ribbonOrder?: string[];
+  /** The order of the buttons inside each group (Discussion #1519); read only from a file that has it. */
+  ribbonToolOrder?: Record<string, string[]>;
+  /** How each group folds (Discussion #1551); read only from a file that has it. */
+  ribbonFold?: Record<string, string>;
 };
 
 export type SettingsFile = {
@@ -79,6 +91,30 @@ export function readBrowserSettings(storage: Pick<Storage, "getItem"> | null): B
   } catch {
     customShortcuts = {};
   }
+  let ribbonHidden: string[] = [];
+  try {
+    ribbonHidden = normalizeRibbonHidden(JSON.parse(readText(storage, RIBBON_HIDDEN_STORAGE_KEY) ?? "[]"));
+  } catch {
+    ribbonHidden = [];
+  }
+  let ribbonOrder: string[] = [];
+  try {
+    ribbonOrder = normalizeRibbonOrder(JSON.parse(readText(storage, RIBBON_ORDER_STORAGE_KEY) ?? "[]"));
+  } catch {
+    ribbonOrder = normalizeRibbonOrder([]);
+  }
+  let ribbonToolOrder: RibbonToolOrder = {};
+  try {
+    ribbonToolOrder = normalizeRibbonToolOrder(JSON.parse(readText(storage, RIBBON_TOOL_ORDER_STORAGE_KEY) ?? "{}"));
+  } catch {
+    ribbonToolOrder = {};
+  }
+  let ribbonFold: RibbonFoldMap = {};
+  try {
+    ribbonFold = normalizeRibbonFold(JSON.parse(readText(storage, RIBBON_FOLD_STORAGE_KEY) ?? "{}"));
+  } catch {
+    ribbonFold = {};
+  }
   return {
     theme: normalizeAppThemePreference(readText(storage, APP_THEME_STORAGE_KEY)),
     toolbarSize: normalizeToolbarSize(readText(storage, TOOLBAR_SIZE_STORAGE_KEY)),
@@ -86,6 +122,10 @@ export function readBrowserSettings(storage: Pick<Storage, "getItem"> | null): B
     shapeColors: normalizeShapeColors(readText(storage, SHAPE_COLORS_STORAGE_KEY)),
     printerPlays,
     customShortcuts,
+    ribbonHidden,
+    ribbonOrder,
+    ribbonToolOrder: { ...ribbonToolOrder } as Record<string, string[]>,
+    ribbonFold: { ...ribbonFold },
   };
 }
 
@@ -141,6 +181,10 @@ export function parseSettingsFile(text: string): SettingsFile | null {
       shapeColors: typeof browser.shapeColors === "boolean" ? browser.shapeColors : true,
       printerPlays: normalizePrinterPlays(browser.printerPlays),
       ...("customShortcuts" in browser ? { customShortcuts: normalizeCustomShortcuts(browser.customShortcuts) } : {}),
+      ...("ribbonHidden" in browser ? { ribbonHidden: normalizeRibbonHidden(browser.ribbonHidden) } : {}),
+      ...("ribbonOrder" in browser ? { ribbonOrder: normalizeRibbonOrder(browser.ribbonOrder) } : {}),
+      ...("ribbonToolOrder" in browser ? { ribbonToolOrder: { ...normalizeRibbonToolOrder(browser.ribbonToolOrder) } as Record<string, string[]> } : {}),
+      ...("ribbonFold" in browser ? { ribbonFold: { ...normalizeRibbonFold(browser.ribbonFold) } } : {}),
     },
   };
 }

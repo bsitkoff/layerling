@@ -3,12 +3,18 @@ import { faceFrameWorkplane } from "@/lib/carryOntoFace";
 import {
   faceOutlineFromTriangles,
   HOLE_PATTERN_MIN_SIZE,
+  holeFootprintPolygon,
   holeFootprintSize,
   holeHasHead,
+  holeHeadAngle,
   holeHeadDepth,
   holeHeadSize,
   holePatternCenters,
+  holeCrossSection,
+  holeTiltRadians,
+  holeTurn,
   roundWallCenters,
+  withoutHoleTilt,
   type FaceOutline,
   type HolePatternSettings,
   type Point2,
@@ -17,7 +23,7 @@ import {
 import { placementPatchForNewShape, type PlacementWorkplane } from "@/lib/placementWorkplane";
 import { nearestFaceTriangle, planarFaceTriangles } from "@/lib/rotationPivot";
 import { roundFaceTriangles, type RoundFaceAxis } from "@/lib/roundFaceAxis";
-import { METRIC_COUNTERSINK_ANGLE, screwHoleFields, screwHoleSizesFor, type ScrewHoleSize } from "@/lib/screwHoleSizes";
+import { screwHoleFields, screwHoleSizesFor, type ScrewHoleSize } from "@/lib/screwHoleSizes";
 import { makeShapeFromAsset, toolbarShapeAssets } from "@/lib/shapeCatalog";
 import { createLocalId } from "@/lib/localIds";
 import { canonicalizeShape, shapeDepth, shapeWidth, withHoleMode } from "@/lib/workplaneShapes";
@@ -34,6 +40,13 @@ export type PerforableFace = {
   outline: FaceOutline;
   /** How thick the body is behind the face, along the face's normal. */
   thickness: number;
+  /**
+   * How thick the wall is behind the point picked, straight in to the next surface of the body: on a hollow box the
+   * wall itself, not the whole box. Holes sloping through the wall are fitted and cut with it.
+   */
+  wall?: number;
+  /** The body's world triangles, nine numbers each, to find where each sloping hole leaves the wall. */
+  body?: Float64Array;
 };
 
 export type FaceReadResult =
@@ -81,7 +94,11 @@ export function readPerforableFace(positions: ArrayLike<number>, point: Vec, nor
   for (let index = 0; index < positions.length; index += 3) {
     lowest = Math.min(lowest, n.x * positions[index] + n.y * positions[index + 1] + n.z * positions[index + 2]);
   }
-  return { ok: true, face: { workplane, outline, thickness: Math.max(0, planeOffset - lowest) } };
+  const thickness = Math.max(0, planeOffset - lowest);
+  const body = positions instanceof Float64Array ? positions : Float64Array.from(positions);
+  const behind = nearestRayHit(body, origin, n.clone().negate());
+  const wall = behind === null ? thickness : Math.min(thickness, behind);
+  return { ok: true, face: { workplane, outline, thickness, wall, body } };
 }
 
 /**
@@ -334,25 +351,37 @@ function nearestRayHit(triangles: Float64Array, origin: THREE.Vector3, direction
   return Number.isFinite(nearest) ? nearest : null;
 }
 
-/** The screw sizes a hole with this head offers (a countersink only those ISO 15065 has). */
+/** How much wider a countersink's cone gets for each millimetre it rises: 1 at 90 degrees (Discussion #1534). */
+function countersinkSlope(settings: Partial<Pick<HolePatternSettings, "headAngle">>) {
+  const angle = holeHeadAngle(settings);
+  return angle === 90 ? 1 : Math.tan((angle * Math.PI) / 360);
+}
+
+/** The screw sizes a hole with this head offers (a countersink those ISO 15065 has and the inch ones). */
 export function holePatternScrewSizes(type: "counterbore" | "countersink"): ScrewHoleSize[] {
   return screwHoleSizesFor(type);
 }
 
 /** Shaft, head and depth for a screw of this size, as the counterbore and countersink shapes take them (#1232). */
-export function holePatternScrewPatch(type: "counterbore" | "countersink", size: ScrewHoleSize): Pick<HolePatternSettings, "size" | "headSize" | "headDepth"> {
+export function holePatternScrewPatch(type: "counterbore" | "countersink", size: ScrewHoleSize): Pick<HolePatternSettings, "size" | "headSize" | "headDepth" | "headAngle"> {
   const fields = screwHoleFields(type, size, 0);
-  return { size: fields.screwHoleShaft, headSize: fields.width, ...(fields.screwHoleHeadDepth !== undefined ? { headDepth: fields.screwHoleHeadDepth } : {}) };
+  return {
+    size: fields.screwHoleShaft,
+    headSize: fields.width,
+    ...(fields.screwHoleHeadDepth !== undefined ? { headDepth: fields.screwHoleHeadDepth } : {}),
+    ...(fields.screwHoleAngle !== undefined ? { headAngle: fields.screwHoleAngle } : {}),
+  };
 }
 
 /** The screw size whose hole the settings make, or null for measures of their own. */
-export function holePatternScrewSize(settings: Pick<HolePatternSettings, "form" | "size" | "holeType" | "headSize" | "headDepth">): ScrewHoleSize | null {
+export function holePatternScrewSize(settings: Pick<HolePatternSettings, "form" | "size" | "holeType" | "headSize" | "headDepth" | "headAngle">): ScrewHoleSize | null {
   if (!holeHasHead(settings)) return null;
   const type = settings.holeType as "counterbore" | "countersink";
   const near = (a: number | undefined, b: number | undefined) => a !== undefined && b !== undefined && Math.abs(a - b) < 0.005;
   return holePatternScrewSizes(type).find((size) => {
     const patch = holePatternScrewPatch(type, size);
-    return near(settings.size, patch.size) && near(holeHeadSize(settings), patch.headSize) && (type === "countersink" || near(holeHeadDepth(settings), patch.headDepth));
+    return near(settings.size, patch.size) && near(holeHeadSize(settings), patch.headSize)
+      && (type === "countersink" ? near(holeHeadAngle(settings), patch.headAngle) : near(holeHeadDepth(settings), patch.headDepth));
   }) ?? null;
 }
 
@@ -365,6 +394,64 @@ const FORM_KIND: Record<HolePatternSettings["form"], ShapeKind> = {
   // An own shape is a copy of itself; the kind is not used for it.
   custom: "box",
 };
+
+/**
+ * A hole's frame turned round its normal by `turn` radians from x towards z, as `holeTurn` gives it: a turned rectangle
+ * or slot stands in it, its width along the new x. The turn stays in the face, so the frame keeps its handedness.
+ */
+function turnedWorkplane(workplane: PlacementWorkplane, turn: number): PlacementWorkplane {
+  if (turn === 0) return workplane;
+  const x = new THREE.Vector3(workplane.xAxis.x, workplane.xAxis.y, workplane.xAxis.z);
+  const z = new THREE.Vector3(workplane.zAxis.x, workplane.zAxis.y, workplane.zAxis.z);
+  const cos = Math.cos(turn);
+  const sin = Math.sin(turn);
+  return {
+    ...workplane,
+    xAxis: vec(x.clone().multiplyScalar(cos).addScaledVector(z, sin)),
+    zAxis: vec(z.clone().multiplyScalar(cos).addScaledVector(x, -sin)),
+  };
+}
+
+/**
+ * A hole's frame tipped through the wall by `tilt` radians about the face's x axis: the frame's normal (the hole's axis,
+ * out of the wall) goes from the face's normal towards the face's z, so the hole's inner end rises on a standing face
+ * (whose z points down). The frame's x and z go along, staying square to the axis.
+ */
+function tiltedWorkplane(frame: PlacementWorkplane, face: PlacementWorkplane, tilt: number): PlacementWorkplane {
+  const u = new THREE.Vector3(face.xAxis.x, face.xAxis.y, face.xAxis.z).normalize();
+  const n = new THREE.Vector3(face.normal.x, face.normal.y, face.normal.z);
+  const z = new THREE.Vector3(face.zAxis.x, face.zAxis.y, face.zAxis.z);
+  // Turning by a about u takes n to n cos a + (u x n) sin a: pick the way round that leans n towards z.
+  const way = u.clone().cross(n).dot(z) >= 0 ? 1 : -1;
+  const turn = (value: Vec) => vec(new THREE.Vector3(value.x, value.y, value.z).applyAxisAngle(u, way * tilt));
+  return { ...frame, normal: turn(frame.normal), xAxis: turn(frame.xAxis), zAxis: turn(frame.zAxis) };
+}
+
+/** Above this many ray tests a pattern measures the wall once, where it was picked, instead of at every hole. */
+const SLOPED_RAY_BUDGET = 20_000_000;
+
+/**
+ * How far a hole sloping through the wall reaches. `cap` is how far its square end stands out past the face (or past
+ * the back of the wall) along the axis so that no part of its slanted meeting with the face is left as skin; `inside`
+ * is the length of the axis within the wall, from the face to where it comes out, or to the depth asked for (measured
+ * straight in, as for a straight hole).
+ */
+function slopedHoleReach(face: PerforableFace, settings: HolePatternSettings, tilt: number, wall: number, count: number) {
+  const cos = Math.cos(tilt);
+  let halfAcross = 0;
+  for (const point of holeCrossSection(settings)) halfAcross = Math.max(halfAcross, Math.abs(point.v));
+  const cap = halfAcross * Math.tan(Math.abs(tilt)) + HOLE_OVERSHOOT / cos;
+  const body = face.body;
+  const perHole = body && count * (body.length / 9) <= SLOPED_RAY_BUDGET;
+  const inside = (onFace: THREE.Vector3, out: THREE.Vector3) => {
+    if (settings.depth !== null) return settings.depth / cos;
+    if (!perHole || !body) return wall / cos;
+    const into = out.clone().negate();
+    const hit = nearestRayHit(body, onFace, into);
+    return hit === null ? wall / cos : hit;
+  };
+  return { cap, inside };
+}
 
 /** The depth the holes actually get: the body's thickness plus a skin's worth, or what was asked for. */
 export function holeDepth(face: Pick<PerforableFace, "thickness">, settings: Pick<HolePatternSettings, "depth">) {
@@ -445,9 +532,12 @@ export function holePatternShapes(
   /** Own shape (#1235): the shape from the scene that is repeated in place of a hole. */
   custom?: WorkplaneShape | null,
 ): HolePatternPlan {
-  if (isRoundWallFace(face)) return roundWallHoleShapes(face, settings, namePrefix, previewIdPrefix, custom);
+  // Sloping through the wall is for flat faces for now.
+  if (isRoundWallFace(face)) return roundWallHoleShapes(face, withoutHoleTilt(settings), namePrefix, previewIdPrefix, custom);
   if (settings.form === "custom" && !custom) return { holes: [], tooMany: false };
-  const { centers, tooMany, ring } = holePatternCenters(face.outline, settings);
+  const tilt = holeTiltRadians(settings);
+  const wall = face.wall ?? face.thickness;
+  const { centers, tooMany, ring } = holePatternCenters(face.outline, settings, tilt === 0 ? 0 : wall);
   if (tooMany || centers.length === 0) return { holes: [], tooMany, ...(ring ? { ring } : {}) };
 
   if (settings.form === "custom" && custom) {
@@ -490,7 +580,7 @@ export function holePatternShapes(
     screwHoleShaft: Math.max(0.5, settings.size),
     ...(headType === "counterbore"
       ? { screwHoleHeadDepth: holeHeadDepth(settings) + HOLE_OVERSHOOT, width: holeHeadSize(settings) }
-      : { screwHoleAngle: METRIC_COUNTERSINK_ANGLE, width: holeHeadSize(settings) + 2 * HOLE_OVERSHOOT }),
+      : { screwHoleAngle: holeHeadAngle(settings), width: holeHeadSize(settings) + 2 * HOLE_OVERSHOOT * countersinkSlope(settings) }),
   } : null;
   const size = head ? { width: head.width, height: head.width } : holeFootprintSize(settings);
   const { workplane } = face;
@@ -498,23 +588,41 @@ export function holePatternShapes(
   const origin = new THREE.Vector3(workplane.origin.x, workplane.origin.y, workplane.origin.z);
   const xAxis = new THREE.Vector3(workplane.xAxis.x, workplane.xAxis.y, workplane.xAxis.z);
   const zAxis = new THREE.Vector3(workplane.zAxis.x, workplane.zAxis.y, workplane.zAxis.z);
+  // A turned rectangle or slot stands turned in the face as its outline was when the holes were fitted.
+  const turnedFrame = turnedWorkplane(workplane, holeTurn(settings));
+  // A hole sloping through the wall stands in that frame tipped about the face's x; `out` is its axis, out of the wall.
+  const holeFrame = tilt === 0 ? turnedFrame : tiltedWorkplane(turnedFrame, workplane, tilt);
+  const out = new THREE.Vector3(holeFrame.normal.x, holeFrame.normal.y, holeFrame.normal.z);
+  const sloped = tilt === 0 ? null : slopedHoleReach(face, settings, tilt, wall, centers.length);
 
   const holes = centers.map((center, index) => {
-    const top = origin.clone().addScaledVector(xAxis, center.u).addScaledVector(zAxis, center.v).addScaledVector(normal, HOLE_OVERSHOOT);
-    const base = top.clone().addScaledVector(normal, -height);
+    const onFace = origin.clone().addScaledVector(xAxis, center.u).addScaledVector(zAxis, center.v);
+    let top: THREE.Vector3;
+    let base: THREE.Vector3;
+    let length = height;
+    if (sloped) {
+      // From a little out of the face, past the whole slanted end, to where it comes out of the wall (or the depth asked).
+      const inside = sloped.inside(onFace, out);
+      top = onFace.clone().addScaledVector(out, sloped.cap);
+      base = onFace.clone().addScaledVector(out, -(inside + (settings.depth === null ? sloped.cap : 0)));
+      length = top.distanceTo(base);
+    } else {
+      top = onFace.clone().addScaledVector(normal, HOLE_OVERSHOOT);
+      base = top.clone().addScaledVector(normal, -height);
+    }
     const made = makeShapeFromAsset(
       { ...asset, name: `${namePrefix} ${index + 1}` },
       { x: 0, z: 0, elevation: 0 },
       {
         width: size.width,
         depth: size.height,
-        height,
+        height: length,
         sides: settings.form === "hexagon" ? 6 : undefined,
         ...(head ? { screwHoleShaft: head.screwHoleShaft, screwHoleHeadDepth: head.screwHoleHeadDepth, screwHoleAngle: head.screwHoleAngle } : {}),
       },
     );
-    const sized = { ...made, width: size.width, depth: size.height, height, size: Math.max(size.width, size.height) };
-    const placed = { ...sized, ...placementPatchForNewShape(sized, workplane, base), ...(previewIdPrefix ? { id: `${previewIdPrefix}-${index}` } : {}) };
+    const sized = { ...made, width: size.width, depth: size.height, height: length, size: Math.max(size.width, size.height) };
+    const placed = { ...sized, ...placementPatchForNewShape(sized, holeFrame, base), ...(previewIdPrefix ? { id: `${previewIdPrefix}-${index}` } : {}) };
     return canonicalizeShape(withHoleMode(placed, true));
   });
   return { holes, tooMany: false, ...(ring ? { ring } : {}) };
@@ -533,7 +641,13 @@ function roundWallHoleShapes(
   custom?: WorkplaneShape | null,
 ): HolePatternPlan {
   const { round } = face;
-  const result = roundWallCenters(round.outline, settings);
+  // The wall's flat frame runs round it and along the axis; seen from outside that turns the other way to a flat
+  // face's frame (and to a hole's own frame there, whose x points back round the wall). So on the outside a turned
+  // hole is fitted turned the other way round, and both the fit and the hole come out turned as seen looking at the wall.
+  const fitSettings: HolePatternSettings = round.outside && holeTurn(settings) !== 0
+    ? { ...settings, holeAngle: -(settings.holeAngle ?? 0) }
+    : settings;
+  const result = roundWallCenters(round.outline, fitSettings);
   const wall = { diameter: round.radius * 2, closed: round.outline.closed, ...(result.columns !== undefined ? { columns: result.columns, spacing: result.spacing } : {}) };
   if (settings.form === "custom" && !custom) return { holes: [], tooMany: false, wall };
   if (result.tooMany || result.centers.length === 0) return { holes: [], tooMany: result.tooMany, wall };
@@ -570,7 +684,11 @@ function roundWallHoleShapes(
   if (!asset) return { holes: [], tooMany: false, wall };
   const footprint = holeFootprintSize(settings);
   const width = headType ? holeHeadSize(settings) : footprint.width;
-  const half = width / 2;
+  // How far the hole reaches round the wall from its middle: half its width, or more for a turned hole.
+  const turn = holeTurn(settings);
+  const half = turn !== 0 && !headType
+    ? Math.max(...holeFootprintPolygon(fitSettings).map((point) => Math.abs(point.u)))
+    : width / 2;
   // The open end stands just clear of the face: outside a cylinder in its middle, inside a bore at its edges as well.
   const top = inward ? radius + HOLE_OVERSHOOT : clearOfSurface(radius - HOLE_OVERSHOOT, half, true);
   const topOver = Math.abs(top - radius);
@@ -585,7 +703,7 @@ function roundWallHoleShapes(
       screwHoleShaft: Math.max(0.5, settings.size),
       ...(headType === "counterbore"
         ? { screwHoleHeadDepth: holeHeadDepth(settings) + topOver, width: holeHeadSize(settings) }
-        : { screwHoleAngle: METRIC_COUNTERSINK_ANGLE, width: holeHeadSize(settings) + 2 * topOver }),
+        : { screwHoleAngle: holeHeadAngle(settings), width: holeHeadSize(settings) + 2 * topOver * countersinkSlope(settings) }),
     } : null;
     const size = head ? { width: head.width, height: head.width } : footprint;
     const made = makeShapeFromAsset(
@@ -601,7 +719,7 @@ function roundWallHoleShapes(
     );
     const sized = { ...made, width: size.width, depth: size.height, height, size: Math.max(size.width, size.height) };
     // The hole stands on its far end and reaches up to the open end, along the frame's normal.
-    const placed = { ...sized, ...placementPatchForNewShape(sized, place.workplane, place.at(end)), ...(previewIdPrefix ? { id: `${previewIdPrefix}-${index}` } : {}) };
+    const placed = { ...sized, ...placementPatchForNewShape(sized, turnedWorkplane(place.workplane, turn), place.at(end)), ...(previewIdPrefix ? { id: `${previewIdPrefix}-${index}` } : {}) };
     return canonicalizeShape(withHoleMode(placed, true));
   });
   return { holes, tooMany: false, wall };

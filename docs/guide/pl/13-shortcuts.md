@@ -15,7 +15,7 @@ Pole u góry okna przeszukuje listę: zostawia tylko skróty, których zdanie, g
 
 Nie możesz znaleźć narzędzia? Naciśnij [[Ctrl]]+[[K]] albo kliknij lupę w sekcji {{ui:editor.group.help}}, a potem wpisz, czego szukasz: narzędzie („zaokrąglenie”, „odbicie”), kształt („walec”) albo polecenie („eksport”, „cofnij”). Poruszaj się strzałkami i naciśnij [[Enter]] albo kliknij wpis.
 
-- Wyszukiwanie rozumie nazwy w języku interfejsu oraz słowa angielskie i niemieckie, a wielkość liter i znaki diakrytyczne pomija: „wydraz” znajdzie {{ui:editor.tool.hollow}}.
+- Wyszukiwanie rozumie nazwy w języku interfejsu oraz słowa angielskie i niemieckie, a wielkość liter i znaki diakrytyczne pomija: „wydraz” znajdzie {{ui:editor.tool.hollow}}. Wyszukiwanie działa w każdym piśmie: nazwa jest znajdowana tak, jak stoi w języku interfejsu („円柱” po japońsku). Znaki pełnej i połowicznej szerokości, katakana i hiragana oraz akcenty są traktowane jak takie same.
 - Każdy wpis pokazuje klawisze, które robią to samo, i sekcję paska narzędzi, w której się znajduje, więc uczysz się, gdzie to jest.
 - Wpisy wyszarzone nie mogą się teraz wykonać, najczęściej dlatego, że nic nie jest zaznaczone. Zostają na liście, żeby wyszukiwanie i tak mówiło, gdzie jest narzędzie.
 
@@ -23,6 +23,7 @@ Instrukcja, którą czytasz, też ma pole wyszukiwania, na górze każdej strony
 - Nazwa kształtu dodaje ten kształt na płaszczyznę roboczą, tak jak kliknięcie go w menu kształtów.
 - Przy pustym polu wyszukiwanie pokazuje na górze ostatnio używane polecenia.
 - Nazwa bryły w Twoim projekcie znajduje tę bryłę i ją zaznacza, co pomaga w projekcie z wieloma częściami. Bryły pojawiają się dopiero, gdy zaczniesz pisać.
+- Zapisany własny kształt też można znaleźć po nazwie, gdy tylko zaczniesz pisać, a kliknięcie wstawia go do projektu jak w panelu kształtów.
 - Działa też w trybie szkicu, z narzędziami szkicu.
 
 ## Własne klawisze

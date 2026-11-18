@@ -57,6 +57,7 @@ Click points one after another.
 ::: Closing or ending a line
 To close the outline, click the first point again at the end.
 To end the chain of lines without closing the outline, right-click without moving the pointer, or double-click the last point.
+If you switch to {{ui:sketch.line}}, {{ui:sketch.bezier}} or {{ui:sketch.smooth}} in the middle of a chain, the line goes on from its last point.
 => A body comes only from a **closed** outline.
 :::
 
@@ -269,6 +270,8 @@ When revolving, you draw half the cross-section **to the left of the axis** show
 
 A revolved body is an exact body, like an extruded one: it takes chamfers and fillets, and you can hollow it, for a cup or a vase. A body revolved with an older layerling is a mesh; open {{ui:inspector.editSketch}} and finish it again to make it exact. A profile that reaches across the axis cannot be built exactly and becomes a mesh, as before.
 
+**Smoother round faces: {{ui:prop.revolveSmoothness}}.** An exact revolved body is cut into small flat facets for the view, the export and the print, and on a large pot they can show on the print. Select the body and set {{ui:prop.revolveSmoothness}} in the properties panel to {{ui:prop.revolveSmoothnessFine}} or {{ui:prop.revolveSmoothnessExtraFine}}: the round faces are cut finer, at the cost of more triangles and a slower design. A helix or a mesh revolve has {{ui:prop.sides}} for this instead.
+
 **One continuous strand: {{ui:prop.pitch}}.** A revolve turns its outline into closed rings. Select the revolved body and give it a {{ui:prop.pitch}} above 0 in the properties panel, the distance it climbs per turn, and the outline winds up as a helix instead: one continuous strand, like filament on a spool or a coil. {{ui:prop.sweep}} then becomes {{ui:prop.turns}}, up to 200; a negative number winds left-handed. Turns closer than the outline is high melt into one body, so a solid core with a fine pitch works too. A helix is built as a mesh, so fillet, chamfer and hollow do not work on it; keep {{ui:prop.sides}} low on many turns. A pitch of 0 makes rings again.
 
 ## Sweeping along a path
@@ -301,7 +304,7 @@ You can set the stroke without opening the sketch too: in the properties of a sk
 
 {{ui:prop.sketchSilhouette}} leaves out every outline lying inside another: holes and whatever lies in them. Only the outer outline stays. Together with {{ui:prop.sketchFill.outside}} it makes a cookie cutter: import an SVG twice, once with the silhouette as an area for the base and once with the silhouette and 1 to 2 mm of stroke outside as the wall. The switch is in the {{ui:sketch.stroke}} window in sketch mode as well.
 
-Fillets and chamfers on the edges go when the body is built again, as when the sketch is edited.
+Fillets and chamfers on the edges go when the body is built again, as when the sketch is edited. {{ui:inspector.taper}} and {{ui:inspector.twist}} stay; a taper grows or shrinks with the outline.
 
 ## Slanted walls, for stamps
 
@@ -351,6 +354,7 @@ The tree beside a house, a figure before a busy background – where no colour t
 | [[Ctrl]]+[[A]] | select every point and line |
 | [[Ctrl]]+[[I]] | {{ui:sketch.addImage}} |
 | [[Shift]] | while drawing: snap the line in 15° steps; while dragging: keep movement on one axis |
+| [[Alt]] | while setting or dragging a point: on the grid only, no snapping to corners and middles |
 | digit, [[<]], [[Tab]], [[Enter]] | while drawing: type and set the length and angle of the next line |
 | [[R]] | rotate the closed sketch by 45° |
 | [[Ctrl]]+[[L]] | lock or unlock the selected outline, or the template image |

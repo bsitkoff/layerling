@@ -79,9 +79,11 @@ Umetna inteligenca dela z istimi funkcijami kot ti, teče po isti poti kot tvoje
 | --- | --- |
 | `layerling_open_editor` | odpre nov zavihek urejevalnika v privzetem brskalniku in počaka, da se poveže (samo na tvojem računalniku) |
 | `layerling_list_editors` | našteje odprte zavihke urejevalnika |
+| `layerling_rename_project` | projektu da ime, kot svinčnik ob imenu projekta |
 | `layerling_read_scene` | prebere prizor, izbor, enote in natančne mere vseh objektov |
 | `layerling_list_objects` | našteje vse objekte z merami, lego, zasukom in oznako |
 | `layerling_select_objects` | izbere objekte |
+| `layerling_hide_others` | skrije vse razen izbora ali navedenih objektov, v enem koraku razveljavitve |
 | `layerling_delete_objects` | izbriše objekte |
 | `layerling_move_object` | premakne objekt na drugo mesto na seznamu objektov |
 | `layerling_create_shape` | ustvari obliko: kvader, valj, besedilo (tudi ukrivljeno), navoj, zobnik, skicirano telo in vse druge |
@@ -91,7 +93,7 @@ Umetna inteligenca dela z istimi funkcijami kot ti, teče po isti poti kot tvoje
 | `layerling_import_mesh` | prinese mrežo trikotnikov v načrt |
 | `layerling_update_object` | spremeni mere, lego, barvo, ime, telo ali luknjo in vse, kar oblika še ima, pri besedilu tudi rob črk |
 | `layerling_align_objects` | poravna objekte drug z drugim |
-| `layerling_scale_objects` | poveča objekte za odstotno vrednost, skupaj ali vsak zase |
+| `layerling_scale_objects` | poveča objekte za odstotno vrednost, skupaj ali vsak zase ali v modelarsko merilo, npr. 1:87 |
 | `layerling_lay_flat` | položi objekt s ploskvijo na ploščo |
 | `layerling_place_on_face` | postavi objekte na ploskev drugega, tudi poševno, kot tipka C |
 | `layerling_perforate_face` | vreže vzorec lukenj v ravno ploskev ali okrog stene valja, cevi ali izvrtine, luknje ostanejo kot luknje, združene v skupino s telesom |
@@ -157,12 +159,16 @@ Umetna inteligenca dela z istimi funkcijami kot ti, teče po isti poti kot tvoje
 | `layerling_insert_custom_shape` | vstavi lastno obliko v odprti načrt, po želji na mesto x/z |
 | `layerling_delete_custom_shape` | odstrani lastno obliko; vstavljena telesa ostanejo |
 | `layerling_show_workplane` | skrije ploščo z njeno mrežo in jo spet prikaže, na primer za sliko spodnje strani (samo pogled) |
+| `layerling_focus_mode` | vklopi in izklopi način osredotočenja: skrije naslovno vrstico in nogo za več prostora (le okvir urejevalnika) |
 | `layerling_set_section_view` | prereže pogled vzdolž ravnine, da se vidi notranjost (samo pogled, nič se ne razreže) |
 | `layerling_measurements` | prikaže ali skrije meritve merilnega traku in jih našteje z njihovimi dolžinami, ter skrije ali prikaže mere okoli izbora kot [[Q]], in vnese dolžino za eno od njih, kar premakne telo na njenem koncu kot klik na število |
 | `layerling_measure_angle` | izmeri kot, kakor kotomer: v oglišču treh točk ali med dvema ravnima ploskvama, in ga pokaže v pogledu |
 | `layerling_saved_view` | shrani trenutni pogled pod tipko 7, 8, 9 ali 0 in se vrne nanj, kot Shift+tipka in tipka (samo pogled); nastavi tudi začetni pogled novih osnutkov |
 | `layerling_build_plates` | našteje, doda, poimenuje, razvrsti in odstrani tiskalne plošče, premakne predmete na ploščo in jih razporedi po ploščah, kot vrstica plošč |
 | `layerling_clear_history` | za vedno izbriše vse korake razveljavitve, kot gumb »Izbriši zgodovino« v pogledu zgodovine; potrebuje `confirm: true` |
+| `layerling_delete_history_steps` | trajno izbriše posamezna stanja zgodovine, nikoli trenutnega, kot koš ob koraku na seznamu pogleda zgodovine; potrebuje `steps` in `confirm: true` |
+| `layerling_list_backups` | navede samodejne varnostne kopije (Prejšnje različice) odprtega projekta, z `all: true` pa vseh projektov v tem brskalniku |
+| `layerling_open_backup` | odpre varnostno kopijo po njenem `id` kot nov projekt, nikoli vezan na izvirno datoteko |
 | `layerling_set_history_view` | pogleda nazaj na prejšnje stanje projekta, kot pogled zgodovine (pravi načrt ostane nedotaknjen; orodja, ki spreminjajo, počakajo, da se zapre) |
 | `layerling_restore_from_history` | vrne objekte (tudi dele v skupinah) iz prejšnjega stanja v načrt kot kopije, kot »Vrni v načrt« v pogledu zgodovine - en korak, ki ga razveljavitev vzame nazaj |
 | `layerling_export_drawing` | naredi delavniško risbo izvoza »2D«: trije pogledi v merilu 1:1 na listu ISO s skupnimi merami in tabelo okroglih izvrtin, kot besedilo SVG ali PDF |

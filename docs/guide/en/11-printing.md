@@ -15,7 +15,7 @@ Three things happen:
 - In the corner of the workplane appear the printer's name and its build volume. If the writing gets in the way, switch it off with {{ui:workspace.showPlateLabels}} under {{ui:workspace.workplane}}; that also goes for the design's name at the front left.
 - layerling **warns** when something does not fit.
 
-The printer profiles come from OrcaSlicer, so they are the same ones your slicer knows. If you would rather work without a printer, choose {{ui:workspace.printerNone}}. You can also set the size of the workplane by hand.
+Most printer profiles come from OrcaSlicer. If you would rather work without a printer, choose {{ui:workspace.printerNone}}. You can also set the size of the workplane by hand.
 
 Delta printers such as those by FLSun or SeeMeCNC, or the Anycubic Predator, print on a round plate. With one of them the workplane is round too, as wide as the plate, and a body is too large as soon as it reaches past the rim. A round body is measured by its own outline, not by the box round it, so a cylinder nearly as wide as the plate still fits.
 
@@ -52,10 +52,10 @@ How steep your printer manages is set in the settings under {{ui:workspace.appea
 
 A part printed tilted on one edge, at 45° say, often needs no supports: its faces are steep enough. But it stands on a thin edge and can fall over. The {{ui:supportRib.title}} holds it: a thin rib stands under its lower face a small gap away, on an oval foot, and tiny bridges hold the part to it. Turn the part onto its edge first and let it stand on the plate.
 
-1. Select the part and click {{ui:supportRib.title}} in the {{ui:editor.group.modify}} group of the ribbon, right-click the part, or find it with [[Ctrl]]+[[K]].
+1. Select the part and click {{ui:supportRib.title}} in the {{ui:editor.section.splitShape}} group of the ribbon, right-click the part, or find it with [[Ctrl]]+[[K]].
 2. Click the lower face where the rib should stand. The face must look down, slope between 15° and 75° and reach down to the plate; the rib stands straight down the face from your click. If the part's bottom edge is rounded or chamfered, the face may stop up to 3 mm above the plate: click the flat face above the rounding.
 3. Set {{ui:supportRib.nozzle}}, {{ui:supportRib.layerHeight}} and {{ui:supportRib.firstLayer}} as in your slicer. The rib is two lines of the nozzle thick, the gap to the part half a line; each bridge is one line wide and exactly one layer high and lies on a layer of the print, so the slicer prints it as one thin line that breaks off cleanly. {{ui:supportRib.height}} is how high the rib reaches up the face (half way to start), {{ui:supportRib.bridgeSpacing}} how far apart the bridges are, in whole layers.
-4. Under {{ui:supportRib.more}} the thickness, the gap, the bridges' width and the foot's thickness can be set by hand (until then they follow the nozzle and the layers), as can the foot's width and the roundings where the rib meets the foot and at its top.
+4. Under {{ui:supportRib.more}} the thickness, the gap, the bridges' width and the foot's thickness can be set by hand (until then they follow the nozzle and the layers), as can the foot's width and the roundings where the rib meets the foot and at its top. With {{ui:supportRib.bridgeGap}} above 0 the bridges no longer reach into the part but stop that far before it, measured in the layer: the slicer then prints each as a path of its own, which holds the part by the squash of its line and comes off without a mark (half a line, 0.2 mm for a 0.4 mm nozzle, is a good start). Make {{ui:supportRib.gap}} wider with it, so the bridges still cross part of it.
 5. {{ui:supportRib.apply}} adds the rib. With {{ui:supportRib.bundle}} (on to start) rib and part are bundled: they move together and go to the slicer as two bodies side by side, joined by the bridges in the print.
 
 The rib is a mesh body: to change it, delete it and make it again. Each click makes one rib; for more, click {{ui:supportRib.repick}} or repeat it with {{ui:editor.tool.array}}. The rib must not run into the part anywhere, and the part must stand on the plate - otherwise the window says why. Your settings are kept in this browser for the next rib.
@@ -71,6 +71,8 @@ The rib is a mesh body: to change it, delete it and make it again. Each click ma
 ## Your printer's play: the fit test
 
 Every printer prints holes a little smaller and pins a little thicker than they are drawn, each by its own amount, so the clearance two printed parts need is a guess at first. Measure it once instead. In the settings under {{ui:workspace.workplane}}, {{ui:workspace.fitTestMake}} puts a fit test on the plate: a 60 × 20 × 4 mm plate with seven holes for one 5 mm pin, each drawn 5 mm plus twice 0.05, 0.10, 0.15, 0.20, 0.25, 0.30 or 0.40 mm, the value raised beside it, and the 5 mm pin itself, standing beside the plate with a small chamfer on top. It is made of ordinary shapes, so it prints with the rest of the plate, without supports.
+
+On a printer whose bed moves back and forth, the tall, thin pin can wobble loose or come out wavy at its foot, brim or not. Tick {{ui:workspace.fitTestBase}} before you make the fit test: the pin then stands on a small 10 mm plate that holds on to the bed. It does not touch the plate's socket but rests on a small nub in its floor; once printed, bend the pin to and fro and it snaps off.
 
 Print it as it lies, then push the pin, chamfered end first, into the holes from the tightest on. **The snuggest hole the pin still turns in** gives your printer's play. Type its number under {{ui:workspace.printerPlay}}, or click it among the values below the field. The play is per side, in millimetres, and the browser keeps it for every design; an empty field means not measured.
 With several printers, choose the one you print on under {{ui:workspace.printer}} first: each printer keeps a play of its own, and new uses start from the play of the printer the design is set to. A printer without one uses the play set while no printer was chosen.
@@ -89,7 +91,7 @@ From then on, new uses start from the play instead of the built-in value: {{ui:l
 
 ![A tray whose right wall is only 0.6 mm thick: Print check paints it red and names it in the window.](shot:print-check)
 
-{{ui:printCheck.show}} on a line takes the camera there; it selects the floating parts, those standing on too little and the open meshes, and for the overhangs it switches **Show overhangs** on. Bodies that overlap are checked joined, as the slicer joins them. If you change the design while the window is open, it shows {{ui:printCheck.stale}}; click that or {{ui:printCheck.checkAgain}}. [[Esc]] closes the window. Nothing in the design changes. An AI runs the same check with `layerling_check_print`.
+{{ui:printCheck.show}} on a line takes the camera there; it selects the floating parts, those standing on too little and the open meshes, and for the overhangs it switches **Show overhangs** on. Bodies that overlap are checked joined, as the slicer joins them. If you change the design while the window is open, it shows {{ui:printCheck.stale}}; click that or {{ui:printCheck.checkAgain}}. [[Esc]] closes the window. Nothing in the design changes. An AI runs the same check with `layerling_check_print`. The window only checks, it does not print or save anything: to print, export the design for your slicer with {{ui:editor.export}} in {{ui:editor.group.file}}. {{ui:printCheck.openExport}} in the window closes the check and opens the export.
 
 ## When you are ready
 

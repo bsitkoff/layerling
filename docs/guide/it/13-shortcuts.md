@@ -15,7 +15,7 @@ La casella in cima alla finestra cerca nell’elenco: tiene solo le scorciatoie 
 
 Non trovi uno strumento? Premi [[Ctrl]]+[[K]] oppure fai clic sulla lente d’ingrandimento nell’area {{ui:editor.group.help}}, poi digita ciò che cerchi: uno strumento («raccordo», «specchia»), una forma («cilindro») o un comando («esporta», «annulla»). Spostati con i tasti freccia e premi [[Enter]], oppure fai clic sul risultato.
 
-- La ricerca riconosce sia il termine inglese sia quello tedesco e non distingue maiuscole e dieresi: «aushoehlen» trova {{ui:editor.tool.hollow}}.
+- La ricerca riconosce sia il termine inglese sia quello tedesco e non distingue maiuscole e dieresi: «aushoehlen» trova {{ui:editor.tool.hollow}}. La ricerca funziona con qualsiasi scrittura: un nome si trova come è scritto nella lingua dell’interfaccia («円柱» in giapponese). I caratteri a larghezza piena e a metà larghezza, il katakana e l’hiragana e gli accenti contano come uguali.
 - Ogni risultato mostra i tasti che eseguono la stessa operazione e il gruppo della barra degli strumenti in cui si trova, così puoi imparare dove cercarlo.
 - Le voci disattivate non sono disponibili in quel momento, spesso perché non hai selezionato nulla. Restano nell’elenco, così la ricerca ti indica comunque dove si trova lo strumento.
 
@@ -24,6 +24,7 @@ Anche la guida che stai leggendo ha una casella di ricerca in cima a ogni pagina
 - Il nome di una forma la aggiunge al piano di lavoro, proprio come se la scegliessi dal menu delle forme.
 - Se il campo è vuoto, in cima compaiono i comandi usati più di recente.
 - Se cerchi il nome di un corpo del progetto, la ricerca lo trova e lo seleziona: è utile quando il progetto contiene molti pezzi. I corpi compaiono solo dopo che inizi a digitare.
+- Anche una forma personalizzata salvata si trova dal nome, appena digiti, e un clic la inserisce nel progetto come nel pannello delle forme.
 - La ricerca funziona anche in modalità schizzo, con gli strumenti per gli schizzi.
 
 ## I tuoi tasti

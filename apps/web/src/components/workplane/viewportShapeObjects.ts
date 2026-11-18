@@ -214,15 +214,19 @@ export let edgeLineStyle = { enabled: false, color: DEFAULT_EDGE_LINE_COLOR };
 /** "Show holes more clearly" (#662): darker, denser holes with a line round them, handed over like the edge lines. */
 export let strongHoles = false;
 
+/** The hole opacity slider (#1566) in percent, 10 to 90; 0 is automatic and follows strongHoles. */
+export let holeOpacitySetting = 0;
+
 export function setEdgeLineStyle(enabled: boolean, color: string) {
   const changed = edgeLineStyle.enabled !== enabled || (enabled && edgeLineStyle.color !== color);
   edgeLineStyle = { enabled, color };
   return changed;
 }
 
-export function setStrongHoles(enabled: boolean) {
-  const changed = strongHoles !== enabled;
+export function setStrongHoles(enabled: boolean, opacityPercent = 0) {
+  const changed = strongHoles !== enabled || holeOpacitySetting !== opacityPercent;
   strongHoles = enabled;
+  holeOpacitySetting = opacityPercent;
   return changed;
 }
 export const STRONG_HOLE_COLOR = "#5b6670";
@@ -307,6 +311,9 @@ export function tapeShapeTopologyKey(shape: WorkplaneShape): string {
     slopeEnd: shape.slopeEnd,
     slopeSide: shape.slopeSide,
     slopeCurve: shape.slopeCurve,
+    slopeFrom: shape.slopeFrom,
+    sideDrop: shape.sideDrop,
+    sideCurve: shape.sideCurve,
     narrowEnd: shape.narrowEnd,
     narrowSide: shape.narrowSide,
     narrowCurve: shape.narrowCurve,
@@ -326,6 +333,8 @@ export function tapeShapeTopologyKey(shape: WorkplaneShape): string {
     gearRim: shape.gearRim,
     helixAngle: shape.helixAngle,
     bevelHelixAngle: shape.bevelHelixAngle,
+    ringRackHelixAngle: shape.ringRackHelixAngle,
+    ringRackHerringbone: shape.ringRackHerringbone,
     threadRole: shape.threadRole,
     threadHead: shape.threadHead,
     threadHand: shape.threadHand,
@@ -378,6 +387,7 @@ export function tapeShapeTopologyKey(shape: WorkplaneShape): string {
     hingeKnuckleWidth: shape.hingeKnuckleWidth,
     hingeConeSize: shape.hingeConeSize,
     hingeStyle: shape.hingeStyle,
+    hingeSnapGrip: shape.hingeSnapGrip,
     hingePinDiameter: shape.hingePinDiameter,
     hingeLeafThickness: shape.hingeLeafThickness,
     hingeClearance: shape.hingeClearance,
@@ -475,6 +485,7 @@ export function tapeShapeTopologyKey(shape: WorkplaneShape): string {
     loftOffsetX: shape.loftOffsetX,
     loftOffsetZ: shape.loftOffsetZ,
     loftWall: shape.loftWall,
+    loftTopWall: shape.loftTopWall,
     loftTwist: shape.loftTwist,
     loftSmooth: shape.loftSmooth,
     loftSegments: shape.loftSegments,
@@ -486,13 +497,18 @@ export function tapeShapeTopologyKey(shape: WorkplaneShape): string {
     screwHoleShaft: shape.screwHoleShaft,
     screwHoleHeadDepth: shape.screwHoleHeadDepth,
     screwHoleAngle: shape.screwHoleAngle,
+    screwHoleSlot: shape.screwHoleSlot,
+    screwHoleRecess: shape.screwHoleRecess,
+    screwHoleChamfer: shape.screwHoleChamfer,
     // The drill point as built: a solid, the double countersink and a tapered body keep a flat end (drillPoint.ts).
     drillPoint: shapeDrillPointAngle(shape),
     portProfile: shape.portProfile,
     // A dovetail cut-out grows by its clearance, so body and socket differ.
     dovetailHole: shape.kind === "dovetail" ? Boolean(shape.hole) : undefined,
     cornerFillet: shape.cornerFillet,
+    cornerFillets: shape.cornerFillets,
     topBottomFillet: shape.topBottomFillet,
+        bottomFillet: shape.bottomFillet,
     roundedBoxQuality: shape.roundedBoxQuality,
     bentTubeProfile: shape.bentTubeProfile,
     bentTubeInnerProfile: shape.bentTubeInnerProfile,
@@ -578,7 +594,7 @@ export function shapeMaterialSignature(shape: WorkplaneShape): string {
     color: shape.color,
     // A bin's letters in a colour of their own (#1308) are drawn in a second material; the mesh stays as it is.
     letterColor: gridfinityLabelColor(shape),
-    hole: shape.hole ? (strongHoles ? "strong" : true) : false,
+    hole: shape.hole ? `${strongHoles ? "strong" : "plain"}:${holeOpacitySetting}` : false,
     transparent: Boolean(shape.transparent),
     multicolor: shape.groupedShapes?.length ? groupShowsPartColors(shape) : undefined,
     // A group turned into a bundle (or back) changes the colour of its selection outline.
@@ -623,7 +639,7 @@ export function shapeGeometrySignature(shape: WorkplaneShape): string {
   // before the twist stays on screen.
   // A slope along (slopeAlong.ts) rebuilds the mesh per vertex too, worked out in millimetres.
   const slope = shapeHasAlongDeform(shape)
-    ? { end: shape.slopeEnd, side: shape.slopeSide, curve: shape.slopeCurve, narrow: [shape.narrowEnd, shape.narrowSide, shape.narrowCurve, shape.narrowStart] }
+    ? { end: shape.slopeEnd, side: shape.slopeSide, curve: shape.slopeCurve, from: shape.slopeFrom, sides: [shape.sideDrop, shape.sideCurve], narrow: [shape.narrowEnd, shape.narrowSide, shape.narrowCurve, shape.narrowStart], span: shape.slopeSpan }
     : null;
   const deform = shapeHasExtrudeDeform(shape) || slope
     ? { twist: shape.extrudeTwist, offsetX: shape.extrudeTopOffsetX, offsetZ: shape.extrudeTopOffsetZ, slope, pivot: extrudeTwistPivot(shape) }
@@ -734,6 +750,9 @@ export function shapeGeometrySignature(shape: WorkplaneShape): string {
     slopeEnd: shape.slopeEnd,
     slopeSide: shape.slopeSide,
     slopeCurve: shape.slopeCurve,
+    slopeFrom: shape.slopeFrom,
+    sideDrop: shape.sideDrop,
+    sideCurve: shape.sideCurve,
     narrowEnd: shape.narrowEnd,
     narrowSide: shape.narrowSide,
     narrowCurve: shape.narrowCurve,
@@ -753,6 +772,8 @@ export function shapeGeometrySignature(shape: WorkplaneShape): string {
     gearRim: shape.gearRim,
     helixAngle: shape.helixAngle,
     bevelHelixAngle: shape.bevelHelixAngle,
+    ringRackHelixAngle: shape.ringRackHelixAngle,
+    ringRackHerringbone: shape.ringRackHerringbone,
     threadRole: shape.threadRole,
     threadHead: shape.threadHead,
     threadHand: shape.threadHand,
@@ -805,6 +826,7 @@ export function shapeGeometrySignature(shape: WorkplaneShape): string {
     hingeKnuckleWidth: shape.hingeKnuckleWidth,
     hingeConeSize: shape.hingeConeSize,
     hingeStyle: shape.hingeStyle,
+    hingeSnapGrip: shape.hingeSnapGrip,
     hingePinDiameter: shape.hingePinDiameter,
     hingeLeafThickness: shape.hingeLeafThickness,
     hingeClearance: shape.hingeClearance,
@@ -904,6 +926,7 @@ export function shapeGeometrySignature(shape: WorkplaneShape): string {
     loftOffsetX: shape.loftOffsetX,
     loftOffsetZ: shape.loftOffsetZ,
     loftWall: shape.loftWall,
+    loftTopWall: shape.loftTopWall,
     loftTwist: shape.loftTwist,
     loftSmooth: shape.loftSmooth,
     loftSegments: shape.loftSegments,
@@ -915,13 +938,18 @@ export function shapeGeometrySignature(shape: WorkplaneShape): string {
     screwHoleShaft: shape.screwHoleShaft,
     screwHoleHeadDepth: shape.screwHoleHeadDepth,
     screwHoleAngle: shape.screwHoleAngle,
+    screwHoleSlot: shape.screwHoleSlot,
+    screwHoleRecess: shape.screwHoleRecess,
+    screwHoleChamfer: shape.screwHoleChamfer,
     // The drill point as built: a solid, the double countersink and a tapered body keep a flat end (drillPoint.ts).
     drillPoint: shapeDrillPointAngle(shape),
     portProfile: shape.portProfile,
     // A dovetail cut-out grows by its clearance, so body and socket differ.
     dovetailHole: shape.kind === "dovetail" ? Boolean(shape.hole) : undefined,
     cornerFillet: shape.cornerFillet,
+    cornerFillets: shape.cornerFillets,
     topBottomFillet: shape.topBottomFillet,
+        bottomFillet: shape.bottomFillet,
     roundedBoxQuality: shape.roundedBoxQuality,
     bentTubeProfile: shape.bentTubeProfile,
     bentTubeInnerProfile: shape.bentTubeInnerProfile,
@@ -1761,6 +1789,8 @@ export function groupChildAppearance(group: WorkplaneShape, child: WorkplaneShap
 export const TRANSPARENT_SOLID_OPACITY = 0.4;
 
 export function holeOpacity(shape: WorkplaneShape) {
+  // A chosen opacity: an imported mesh a little lighter, as in the automatic values, since its inner faces add up.
+  if (holeOpacitySetting > 0) return (holeOpacitySetting / 100) * (shape.importedMesh ? 0.75 : 1);
   if (strongHoles) return shape.importedMesh ? 0.6 : 0.72;
   return shape.importedMesh ? 0.34 : 0.52;
 }
@@ -1784,6 +1814,7 @@ function shapeWithoutDeform(shape: WorkplaneShape): WorkplaneShape {
     extrudeTopOffsetX: undefined,
     extrudeTopOffsetZ: undefined,
     slopeEnd: undefined,
+    sideDrop: undefined,
     narrowEnd: undefined,
   };
 }
@@ -2122,7 +2153,7 @@ export function createShapeObject(
     case "counterbore":
     case "countersink":
     case "doubleCountersink":
-      addMesh(group, sharedShapeGeometry(geometryCacheKey, () => createScrewHoleGeometry({ kind: shape.kind as "counterbore" | "countersink" | "doubleCountersink", width, depth, height, screwHoleShaft: shape.screwHoleShaft, screwHoleHeadDepth: shape.screwHoleHeadDepth, screwHoleAngle: shape.screwHoleAngle, drillPointAngle: shapeDrillPointAngle(shape), sides: roundSideCount(shape.sides, width, depth) })), material, shape);
+      addMesh(group, sharedShapeGeometry(geometryCacheKey, () => createScrewHoleGeometry({ kind: shape.kind as "counterbore" | "countersink" | "doubleCountersink", width, depth, height, screwHoleShaft: shape.screwHoleShaft, screwHoleHeadDepth: shape.screwHoleHeadDepth, screwHoleAngle: shape.screwHoleAngle, screwHoleRecess: shape.screwHoleRecess, screwHoleChamfer: shape.screwHoleChamfer, drillPointAngle: shapeDrillPointAngle(shape), slot: shape.screwHoleSlot, sides: roundSideCount(shape.sides, width, depth) })), material, shape);
       break;
     case "finishingWasher":
       addMesh(group, sharedShapeGeometry(geometryCacheKey, () => createFinishingWasherGeometry({ width, depth, height, screwHoleShaft: shape.screwHoleShaft, screwHoleHeadDepth: shape.screwHoleHeadDepth, screwHoleAngle: shape.screwHoleAngle, sides: roundSideCount(shape.sides, width, depth) })), material, shape);
@@ -2148,6 +2179,7 @@ export function createShapeObject(
         hingeKnuckleWidth: shape.hingeKnuckleWidth,
         hingeConeSize: shape.hingeConeSize,
         hingeStyle: shape.hingeStyle,
+        hingeSnapGrip: shape.hingeSnapGrip,
         hingePinDiameter: shape.hingePinDiameter,
         hingeLeafThickness: shape.hingeLeafThickness,
         hingeClearance: shape.hingeClearance,
@@ -2347,6 +2379,8 @@ export function createShapeObject(
         gearRim: shape.gearRim,
         helixAngle: shape.helixAngle,
         bevelHelixAngle: shape.bevelHelixAngle,
+        ringRackHelixAngle: shape.ringRackHelixAngle,
+        ringRackHerringbone: shape.ringRackHerringbone,
         helixQuality: shape.helixQuality,
         gearProfile: shape.gearProfile,
         gearPressureAngle: shape.gearPressureAngle,
@@ -2388,7 +2422,9 @@ export function createShapeObject(
         depth,
         height,
         cornerFillet: shape.cornerFillet,
+        cornerFillets: shape.cornerFillets,
         topBottomFillet: shape.topBottomFillet,
+        bottomFillet: shape.bottomFillet,
         roundedBoxQuality: shape.roundedBoxQuality,
       })), material, shape);
       break;

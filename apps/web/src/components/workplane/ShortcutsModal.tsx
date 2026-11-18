@@ -111,6 +111,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { combos: ["Alt+Click"], label: "shortcuts.alignSize" },
       { combos: ["Alt+Click"], label: "shortcuts.alignSpread" },
       { combos: ["D"], label: "shortcuts.dropToWorkplane" },
+      { combos: ["Alt+D"], label: "shortcuts.dropTogether" },
       { combos: ["C"], label: "shortcuts.carryOntoFace" },
       { combos: ["N"], label: "shortcuts.note" },
     ],
@@ -165,6 +166,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     shortcuts: [
       { combos: ["Ctrl+K"], label: "shortcuts.commandSearch" },
       { combos: ["Shift+F1"], label: "shortcuts.interactiveHelp" },
+      { combos: ["Ctrl+Shift+F"], label: "shortcuts.focusMode" },
     ],
   },
   {
@@ -173,6 +175,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
     shortcuts: [
       { combos: ["Ctrl+K"], label: "shortcuts.commandSearch" },
       { combos: ["Shift+F1"], label: "shortcuts.interactiveHelp" },
+      { combos: ["Ctrl+Shift+F"], label: "shortcuts.focusMode" },
       { combos: ["Esc"], label: "shortcuts.sketchEscape" },
       { combos: ["Delete", "Backspace"], label: "shortcuts.sketchDelete" },
       { combos: ["Ctrl+C"], label: "shortcuts.copy" },
@@ -201,6 +204,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { combos: ["1", "2", "3", "4", "5"], label: "shortcuts.sketchTools" },
       { combos: ["Shift"], label: "shortcuts.sketchAngleSnap" },
       { combos: ["Shift"], label: "shortcuts.sketchAxisLock" },
+      { combos: ["Alt"], label: "shortcuts.sketchGridOnly" },
       { combos: ["0-9", "<", "Tab", "Enter"], label: "shortcuts.sketchTypedLine" },
     ],
   },

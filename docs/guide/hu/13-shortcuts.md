@@ -15,7 +15,7 @@ Az ablak tetején lévő mező a listában keres: csak azokat a billentyűparanc
 
 Nem találsz egy eszközt? Nyomd meg a [[Ctrl]]+[[K]] billentyűt, vagy kattints a {{ui:editor.group.help}} területen lévő nagyítóra, majd gépeld be, amit keresel: egy eszközt („lekerekítés”, „tükrözés”), egy alakzatot („henger”) vagy egy parancsot („exportálás”, „visszavonás”). A nyílbillentyűkkel mozogj, és nyomj [[Enter]] billentyűt, vagy kattints a bejegyzésre.
 
-- A kereső a magyar, az angol és a német szót is érti, és figyelmen kívül hagyja a kis- és nagybetűket és az ékezeteket: a „kiuregeles” megtalálja a {{ui:editor.tool.hollow}} parancsot.
+- A kereső a magyar, az angol és a német szót is érti, és figyelmen kívül hagyja a kis- és nagybetűket és az ékezeteket: a „kiuregeles” megtalálja a {{ui:editor.tool.hollow}} parancsot. A kereső minden írásrendszerrel működik: egy nevet úgy talál meg, ahogy a felület nyelvén áll („円柱” japánul). A teljes és a fél szélességű jelek, a katakana és a hiragana, valamint az ékezetek azonosnak számítanak.
 - Minden bejegyzés mutatja az ugyanezt végző billentyűket és a szalagnak azt a csoportját, ahol található, így megtanulod, hol van.
 - A szürkén megjelenő bejegyzések éppen nem futtathatók, többnyire azért, mert semmi sincs kijelölve. A listában maradnak, így a kereső akkor is megmondja, hol van az eszköz.
 
@@ -23,6 +23,7 @@ Az útmutatónak, amelyet olvasol, szintén van keresőmezője, minden oldal tet
 - Egy alakzat nevével hozzáadod azt az alakzatot a munkasíkhoz, pont mintha az alakzatmenüben kattintanál rá.
 - Üres mezőnél a kereső felül az utoljára használt parancsokat sorolja fel.
 - A tervedben lévő test neve megtalálja és kijelöli azt a testet, ami sok részből álló tervben segít. A testek csak akkor jelennek meg, amikor gépelsz.
+- Az elmentett egyéni alakzatot is megtalálja a név alapján, amint gépelsz, és egy kattintás beteszi a tervbe, mint az alakzatpanelen.
 - Vázlatmódban is működik, a vázlateszközökkel.
 
 ## Saját billentyűk

@@ -82,10 +82,12 @@ AI 使用与你相同的功能，走的是与你在编辑器中的操作相同�
 | 工具 | 作用 |
 | --- | --- |
 | `layerling_list_editors` | 列出已打开的编辑器标签页 |
+| `layerling_rename_project` | 给项目命名，和项目名称旁边的铅笔一样 |
 | `layerling_open_editor` | 在你的默认浏览器中打开新的编辑器标签页，并等待它连接（仅限你自己的电脑） |
 | `layerling_read_scene` | 读取场景、选择、单位以及所有对象的精确尺寸 |
 | `layerling_list_objects` | 列出所有对象及其尺寸、位置、旋转和 id |
 | `layerling_select_objects` | 选择对象 |
+| `layerling_hide_others` | 隐藏除选择或指定对象之外的所有内容，只占一步撤销 |
 | `layerling_delete_objects` | 删除对象 |
 | `layerling_move_object` | 把对象移到对象列表中的另一个位置 |
 | `layerling_create_shape` | 创建形状：长方体、圆柱体、文字（也支持弯曲）、螺纹、齿轮、草图实体以及其他所有形状 |
@@ -95,7 +97,7 @@ AI 使用与你相同的功能，走的是与你在编辑器中的操作相同�
 | `layerling_import_mesh` | 把三角网格带入设计 |
 | `layerling_update_object` | 修改尺寸、位置、颜色、名称、实体或孔，以及构成形状的其他一切，包括文字的字母边缘 |
 | `layerling_align_objects` | 让对象彼此对齐 |
-| `layerling_scale_objects` | 按百分比缩放对象，可整体缩放或各自在原位缩放 |
+| `layerling_scale_objects` | 按百分比缩放对象，可整体缩放或各自在原位缩放，或缩放到 1:87 等模型比例 |
 | `layerling_lay_flat` | 让对象的一个面贴在平台上 |
 | `layerling_place_on_face` | 把对象放到另一个对象的某个面上，斜面也可以，如同 C 键 |
 | `layerling_perforate_face` | 在平面上或绕圆柱、圆管、孔的侧壁切出孔阵列；孔仍作为孔与实体分组在一起 |
@@ -161,12 +163,16 @@ AI 使用与你相同的功能，走的是与你在编辑器中的操作相同�
 | `layerling_insert_custom_shape` | 把自定义形状插入当前设计，可指定 x/z 位置 |
 | `layerling_delete_custom_shape` | 移除自定义形状；已插入的实体保留 |
 | `layerling_show_workplane` | 隐藏和显示带网格的平台，例如为了拍摄底部图片（仅改变视图） |
+| `layerling_focus_mode` | 开启或关闭专注模式：隐藏标题栏和页脚以留出更多空间（只影响编辑器框架） |
 | `layerling_set_section_view` | 沿一个平面把视图剖开以便查看内部（仅改变视图，不会真正切开任何东西） |
 | `layerling_measurements` | 显示或隐藏卷尺的测量，并列出它们及其长度，并像 [[Q]] 一样隐藏或显示所选对象周围的尺寸，并可为其中一个测量输入长度，像点击其数字一样移动其一端的物体 |
 | `layerling_measure_angle` | 像量角器一样测量角度：三点的顶点处或两个平面之间，并在视图中显示 |
 | `layerling_saved_view` | 把当前视图保存在按键 7、8、9 或 0 下，并可回到该视图，如同 Shift+按键和单独按该键（仅改变视图）；也可设置新设计的起始视图 |
 | `layerling_build_plates` | 列出、添加、命名、排序和删除打印板，把对象移到某个打印板并分布到各打印板上，如同打印板栏 |
 | `layerling_clear_history` | 永久删除所有撤销步骤，如同历史记录视图的“删除历史记录”按钮；需要 `confirm: true` |
+| `layerling_delete_history_steps` | 永久删除历史中的单个状态（不会删除当前状态），与历史视图列表中步骤旁的垃圾桶相同；需要 `steps` 和 `confirm: true` |
+| `layerling_list_backups` | 列出当前设计的自动备份（早期版本），使用 `all: true` 时列出此浏览器中所有设计的备份 |
+| `layerling_open_backup` | 按 `id` 将备份作为新设计打开，绝不与原文件关联 |
 | `layerling_set_history_view` | 回看项目更早的状态，如同历史记录视图（实际设计不受影响；会改动设计的工具会等到它关闭） |
 | `layerling_restore_from_history` | 把对象（也包括分组内的部件）从更早的状态作为副本带回设计，如同历史记录视图的“带入设计”——撤销会一次性撤回这一步 |
 | `layerling_export_section_svg` | 以 1:1 的 SVG 返回剖切平面上的轮廓，所用实体与导出相同 |

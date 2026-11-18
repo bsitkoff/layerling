@@ -5,7 +5,7 @@ import { GuideHelpLink } from "@/components/GuideHelpLink";
 import { SnapGridMenuItems } from "@/components/workplane/SnapGridMenu";
 import { guideChapterForShape, guideSectionForShape } from "@/lib/guideLinks";
 import { useInspectorCard } from "@/lib/inspectorCards";
-import { AlignCenter, ChevronDown, ChevronUp, Cylinder, Eraser, Eye, EyeOff, FolderOpen, Grid3x3, ImageUp, Layers, Link2, Lock, Minus, MousePointerClick, Pencil, Plus, RefreshCw, RotateCcw, Ruler, Shield, ShieldCheck, Split, Tags, Trash2, Unlock, Waves } from "lucide-react";
+import { AlignCenter, Cone, ChevronDown, ChevronUp, Cylinder, Eraser, Eye, EyeOff, FolderOpen, Grid3x3, ImageUp, Lasso, Layers, Link2, Lock, Minus, Move3d, MousePointerClick, Pencil, Plus, RefreshCw, RotateCcw, Rotate3d, Ruler, Shield, ShieldCheck, Shrink, SlidersHorizontal, Spline, Split, Tags, Trash2, TrendingDown, Unlock, Waves } from "lucide-react";
 import { holdsShapeLock } from "@/lib/shapeLock";
 import { createPortal } from "react-dom";
 import { Fragment, createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type Dispatch, type ReactNode, type SetStateAction } from "react";
@@ -21,6 +21,8 @@ import {
   gearCenterHoleLimits,
   normalizeGearHelixAngle,
   normalizeBevelHelixAngle,
+  normalizeRingRackHelixAngle,
+  ringRackIsHelical,
   normalizeGearHelixQuality,
   normalizeGearCenterHoleSize,
   normalizeGearToothSize,
@@ -159,6 +161,8 @@ import {
   MIN_ROUNDED_BOX_QUALITY,
   MAX_ROUNDED_BOX_QUALITY,
   normalizeCornerFillet,
+  normalizeCornerFillets,
+  normalizeEndFillets,
   normalizeTopBottomFillet,
   normalizeRoundedBoxQuality,
 } from "@/lib/roundedBoxGeometry";
@@ -175,13 +179,16 @@ import {
   minBentTubeBendRadius,
   normalizedBentTubeFields,
 } from "@/lib/bentTubeGeometry";
-import { displayStepFromMillimeters, formatFractionalInches, showsInchFractions, displayToMillimeters, formatMeasurementNumber, lengthDisplayUnit, measurementOptionLabel, millimetersToDisplay, parseMeasurementInput, resolveMeasurementInput } from "@/lib/measurementUnits";
+import { alignBounds } from "@/lib/alignSize";
+import { currentLengthUnitLabel, displayStepFromMillimeters, formatFractionalInches, showsInchFractions, displayToMillimeters, formatMeasurementNumber, lengthDisplayUnit, measurementOptionLabel, millimetersToDisplay, parseMeasurementInput, resolveMeasurementInput } from "@/lib/measurementUnits";
 import { numberLocale, t, type MessageKey } from "@/lib/i18n";
 import { localizedError } from "@/lib/userErrors";
+import { normalizeHexColor } from "@/lib/coloredImport";
 import { displayShapeName, makeShapeFromAsset, renamedShapeName, shapeAssetDefaultDimensions } from "@/lib/shapeCatalog";
 import { cylinderToEllipsePatch } from "@/lib/cylinderToEllipse";
-import { normalizeSurfaceTexture, SURFACE_TEXTURE_AXES, SURFACE_TEXTURE_CAP_EDGES, SURFACE_TEXTURE_CAP_STYLES, SURFACE_TEXTURE_CARBON_WEAVES, SURFACE_TEXTURE_BARK_TYPES, SURFACE_TEXTURE_BRICK_BONDS, SURFACE_TEXTURE_BUMP_GRIDS, SURFACE_TEXTURE_CRACK_STARTS, SURFACE_TEXTURE_CRACK_STYLES, SURFACE_TEXTURE_DEFAULTS, SURFACE_TEXTURE_DETAILS, SURFACE_TEXTURE_DIRECTIONS, SURFACE_TEXTURE_IMAGES, SURFACE_TEXTURE_LIMITS, SURFACE_TEXTURE_MASK_MODES, SURFACE_TEXTURE_PROFILES, SURFACE_TEXTURE_PROJECTIONS, SURFACE_TEXTURE_STARTERS, SURFACE_TEXTURE_TILINGS, SURFACE_TEXTURE_TIMBER_BRACINGS, SURFACE_TEXTURE_WOOD_CUTS, SURFACE_TEXTURE_WOOD_TYPES, surfaceTextureImageTile, type SurfaceTextureFace, type SurfaceTextureMaskMode, type SurfaceTexturePattern, type SurfaceTextureSettings } from "@/lib/surfaceTexture";
+import { normalizeSurfaceTexture, SURFACE_TEXTURE_AXES, SURFACE_TEXTURE_CAP_EDGES, SURFACE_TEXTURE_CAP_STYLES, SURFACE_TEXTURE_CARBON_WEAVES, SURFACE_TEXTURE_BARK_TYPES, SURFACE_TEXTURE_BRICK_BONDS, SURFACE_TEXTURE_BUMP_GRIDS, SURFACE_TEXTURE_CRACK_STARTS, SURFACE_TEXTURE_CRACK_STYLES, SURFACE_TEXTURE_DEFAULTS, SURFACE_TEXTURE_DETAILS, SURFACE_TEXTURE_DIRECTIONS, SURFACE_TEXTURE_IMAGES, SURFACE_TEXTURE_LIMITS, SURFACE_TEXTURE_MASK_MODES, SURFACE_TEXTURE_PROFILES, SURFACE_TEXTURE_PROJECTIONS, SURFACE_TEXTURE_STARTERS, SURFACE_TEXTURE_TILINGS, SURFACE_TEXTURE_TIMBER_BRACINGS, SURFACE_TEXTURE_WOOD_CUTS, SURFACE_TEXTURE_WOOD_TYPES, surfaceTextureImageTile, type SurfaceTextureFace, type SurfaceTextureMaskMode, type SurfaceTexturePattern, type SurfaceTextureRegion, type SurfaceTextureSettings } from "@/lib/surfaceTexture";
 import { SURFACE_TEXTURE_OWN_IMAGE_SIZE, surfaceTextureOwnImage } from "@/lib/surfaceTextureImages";
+import { drawingGrey, drawingOutlines, inTwoTones, SURFACE_IMAGE_OUTLINE_RASTER } from "@/lib/surfaceImageOutline";
 import { BARK_STARTS, WOOD_RINGS } from "@/lib/surfaceTextureWood";
 import { offersSurfaceTextureMask, SURFACE_TEXTURE_LABELS, surfacePatternColor, surfacePatternLabel, surfacePatternPartOf, surfacePatternPartWay, surfaceTextureEntry, surfaceTextureLayerPlaced } from "@/lib/surfaceTextureShape";
 import { LIMITS as VASE_LIMITS, MATERIALS as VASE_MATERIALS, type VaseChoiceKey, type VaseNumberKey } from "@/lib/vase/vase-geometry.mjs";
@@ -192,13 +199,14 @@ import { VasePrintReport } from "@/components/workplane/VasePrintReport";
 import { shapeDefaultsAsset, shapeDefaultsFromShape } from "@/lib/shapeDefaults";
 import { fromPrinterPlay, printerPlayShapeRows, withPrinterPlay } from "@/lib/printerPlay";
 import { usePrinterPlay } from "@/lib/usePrinterPlay";
-import { MAX_SCREW_HOLE_ANGLE, MIN_SCREW_HOLE_ANGLE, normalizeScrewHoleAngle, normalizeScrewHoleHeadDepth, normalizeScrewHoleShaft } from "@/lib/screwHoleGeometry";
+import { MAX_SCREW_HOLE_ANGLE, MIN_SCREW_HOLE_ANGLE, maxScrewHoleChamfer, maxScrewHoleRecess, normalizeScrewHoleAngle, normalizeScrewHoleChamfer, normalizeScrewHoleHeadDepth, normalizeScrewHoleRecess, normalizeScrewHoleShaft, screwHoleHeightForLengthBelowHead, screwHoleLengthBelowHead, screwHoleSlotMeasures } from "@/lib/screwHoleGeometry";
 import { DEFAULT_DRILL_POINT_ANGLE, DRILL_POINT_ANGLES, MAX_DRILL_POINT_ANGLE, MIN_DRILL_POINT_ANGLE, normalizeDrillPointAngle, shapeDrillPointLength, shapeTakesDrillPoint } from "@/lib/drillPoint";
 import { MAX_TEARDROP_TIP_ANGLE, MIN_TEARDROP_TIP_ANGLE, normalizeTeardropTipAngle, teardropHeightForTipAngle, teardropTipAngle } from "@/lib/teardropGeometry";
+import { MAX_WEDGE_ANGLE, MIN_WEDGE_ANGLE, wedgeAngle, wedgeHeightForAngle } from "@/lib/wedgeAngle";
 import { MAX_PORT_CLEARANCE, maxPortCorner, normalizePortClearance, normalizePortCorner, PORT_PRESET_ORDER, PORT_PRESETS, portPresetFor, portPresetSize, type PortPreset } from "@/lib/portGeometry";
 import { MAX_DOVETAIL_CLEARANCE, maxDovetailNeckWidth, normalizeDovetailClearance, normalizeDovetailNeckWidth } from "@/lib/dovetailGeometry";
 import { DEFAULT_SKETCH_STROKE, MAX_SKETCH_STROKE_WIDTH, MIN_SKETCH_STROKE_EDGE, MIN_SKETCH_STROKE_WIDTH, normalizeSketchStroke, SKETCH_STROKE_JOINS } from "@/lib/sketchStroke";
-import { MAX_TEXT_EDGE, MIN_TEXT_EDGE, normalizeTextEdge } from "@/lib/textEdge";
+import { MAX_EDGED_TEXT_LENGTH, MAX_TEXT_EDGE, MIN_TEXT_EDGE, normalizeTextEdge, textAllowsEdge, textHasEdge } from "@/lib/textEdge";
 import { wheelBaseStep, wheelNextValue, wheelTurn } from "@/lib/wheelValueStep";
 import { textHasFill } from "@/lib/textFill";
 import { TEXT_FILL_CHOICES, textFillChoice, textLineSettingsInView, textStrokeForChoice, textStrokeWider, type TextFillChoice } from "@/lib/textFillChoice";
@@ -206,7 +214,8 @@ import { MAX_TEXT_LAYERS, MAX_TEXT_LAYER_GROW, MIN_TEXT_LAYER_HEIGHT, nameTagKey
 import { iconKeyringAlongLimit } from "@/lib/sketchKeyring";
 import { DEFAULT_KEYRING_DIAMETER, curvedRadiusPatch, MAX_TEXT_LETTER_WIDTH, MAX_TEXT_SPACING, MIN_KEYRING_DIAMETER, MIN_TEXT_LETTER_WIDTH, MIN_TEXT_SPACING, TEXT_KEYRING_SIDES } from "@/lib/textGeometry";
 import { DEFAULT_TEXT_BLOCK_GAP, MAX_TEXT_BLOCK_GAP, MAX_TEXT_BLOCK_LINES, MAX_TEXT_BLOCK_STEP, MIN_TEXT_BLOCK_STEP, TEXT_BLOCK_ALIGNS, textBlockLines, type TextBlockAlign, type TextBlockOptions } from "@/lib/textBlock";
-import { addTextLayer, MIN_LETTER_SIZE, MIN_NAME_TAG_LAYERS, NAME_TAG_GAP, NAME_TAG_LAYERS, NAME_TAG_LETTER_SIZE, removeTextLayer, textBaselineKeepShift, textLetterSize, textLetterSizePatch, textKerningPatch, textSpacingPatch, type NameTagStack } from "@/lib/nameTag";
+import { limitedText, MAX_TEXT_LENGTH } from "@/lib/textLength";
+import { addTextLayer, MIN_LETTER_SIZE, MIN_NAME_TAG_LAYERS, NAME_TAG_GAP, NAME_TAG_LAYERS, NAME_TAG_LETTER_SIZE, removeTextLayer, tagHasLayerSteps, textBaselineKeepShift, textLetterSize, textLetterSizePatch, textKerningPatch, textSpacingPatch, type NameTagStack } from "@/lib/nameTag";
 import { FONT_MANAGER_OPTION, requestFontManager } from "@/lib/fontManagerEvents";
 import { FontPicker } from "@/components/workplane/FontPicker";
 import { SurfacePatternPicker } from "@/components/workplane/SurfacePatternPicker";
@@ -217,7 +226,7 @@ import { PICTURE_FILE_ACCEPT } from "@/lib/pictureIcon";
 import { customFontList, textFontLabel } from "@/lib/textFonts";
 import { SURFACE_TEXT_FONTS } from "@/lib/surfaceTextOutline";
 import { MIN_SLOT_END_RATIO, normalizeSlotEndRatio, taperedSlotOutline } from "@/lib/slotGeometry";
-import { loftMeasures, loftMiddlesWithCount, MAX_LOFT_MIDDLES, normalizeLoftThrough, loftShapePatch, loftTiltLimit, maxLoftWall, MAX_LOFT_SEGMENTS, MAX_LOFT_SIDES, MAX_LOFT_TWIST, MIN_LOFT_SEGMENTS, MIN_LOFT_SIDES, MIN_LOFT_SIZE, normalizeLoftOutline, type LoftMeasures } from "@/lib/loftGeometry";
+import { loftMeasures, loftMiddlesWithCount, MAX_LOFT_MIDDLES, normalizeLoftThrough, loftShapePatch, loftTiltLimit, maxLoftWall, MAX_LOFT_SEGMENTS, MIN_LOFT_TOP_WALL, MAX_LOFT_SIDES, MAX_LOFT_TWIST, MIN_LOFT_SEGMENTS, MIN_LOFT_SIDES, MIN_LOFT_SIZE, normalizeLoftOutline, type LoftMeasures } from "@/lib/loftGeometry";
 import { MAX_KNURL_ANGLE, MIN_KNURL_ANGLE, MIN_KNURL_COUNT, MIN_KNURL_DEPTH, knurlSettings, maxKnurlChamfer, maxKnurlCount, maxKnurlDepth, maxRoundKnurlDepth, normalizeKnurlAngle, normalizeKnurlChamfer, normalizeKnurlCount, normalizeKnurlDepth, normalizeKnurlPattern } from "@/lib/knurlGeometry";
 import {
   DEFAULT_GRIDFINITY_LABEL_CORNER,
@@ -310,14 +319,14 @@ import {
 } from "@/lib/gridfinityGeometry";
 import { gridfinityLabelFont, gridfinityLabelTextLeftOut } from "@/lib/gridfinityLabelText";
 import { gridfinityLabelColor } from "@/lib/gridfinityLetterColor";
-import { hingeLargestConeSize, hingeLargestCornerRadius, MAX_HINGE_ANGLE, MIN_HINGE_ANGLE, MAX_HINGE_CLEARANCE, MAX_HINGE_KNUCKLES, MAX_HINGE_SCREW_DIAMETER, MAX_HINGE_SCREW_HOLES, MIN_HINGE_CLEARANCE, MIN_HINGE_KNUCKLES, MIN_HINGE_SCREW_DIAMETER, hingePlan, minimumHingeDepth, normalizeHingeAngle, normalizeHingeClearance, normalizeHingeKnuckles, normalizeHingeKnuckleWidth, normalizeHingeLeafThickness, normalizeHingePinDiameter, normalizeHingeScrewDiameter, normalizeHingeScrewHead, normalizeHingeScrewHoles, MAX_HINGE_NUT_WIDTH } from "@/lib/hingeGeometry";
+import { hingeLargestConeSize, hingeLargestCornerRadius, MAX_HINGE_ANGLE, MIN_HINGE_ANGLE, MAX_HINGE_CLEARANCE, MAX_HINGE_KNUCKLES, MAX_HINGE_SCREW_DIAMETER, MAX_HINGE_SCREW_HOLES, MIN_HINGE_CLEARANCE, MIN_HINGE_KNUCKLES, MIN_HINGE_SCREW_DIAMETER, hingePlan, minimumHingeDepth, normalizeHingeAngle, normalizeHingeClearance, normalizeHingeKnuckles, normalizeHingeKnuckleWidth, normalizeHingeLeafThickness, normalizeHingePinDiameter, normalizeHingeScrewDiameter, normalizeHingeScrewHead, normalizeHingeScrewHoles, normalizeHingeSnapGrip, MAX_HINGE_NUT_WIDTH, MAX_HINGE_SNAP_GRIP, MIN_HINGE_SNAP_GRIP } from "@/lib/hingeGeometry";
 import { useLanguage } from "@/lib/useLanguage";
 import { useMovablePanel, type MovablePanelOptions } from "@/lib/useMovablePanel";
 import { meshAabb } from "@/lib/editorMeshCore";
 import { undersideOffset } from "@/lib/positionUnderside";
 import { plateOffsetOfShape } from "@/lib/buildPlates";
 import { isNonSolidShape, normalizeGroupResize, resizedShapeSize, shapeDepth, shapeHasTaper, shapeOverallFootprintDimensions, shapeSupportsTaper, shapeTaperDimensions, shapeWidth } from "@/lib/workplaneShapes";
-import { tubeBeforeEdgeTreatments } from "@/lib/edgeTreatmentHistory";
+import { shapeBeforeEdgeTreatments, tubeBeforeEdgeTreatments } from "@/lib/edgeTreatmentHistory";
 import { MAX_SKETCH_REVOLVE_TURNS, normalizeSketchRevolveSettings } from "@/lib/sketchRevolve";
 import { roundSideCount } from "@/lib/roundSideCount";
 import { normalizeCurvedConeBend, normalizeCurvedConeTop } from "@/lib/curvedCone";
@@ -356,7 +365,7 @@ import {
 import { regularPolygonAspect } from "@/lib/regularPolygonFootprint";
 import { DEFAULT_TAPER_DIMENSION_MAX, MAX_HIGH_RESOLUTION_SIDES, MAX_HIGH_RESOLUTION_STEPS, POSITION_TYPED_LIMIT, RULER_MAX_LENGTH, customSnapGridLabel, positionReach, shapeDimensionLimit, snapGridStep } from "@/lib/workplaneSettings";
 import { printerPresetById } from "@/lib/printBed";
-import { narrowCrossWidth, narrowEndWidth, normalizeNarrowStart, normalizeSlopeCurve, normalizeSlopeSide, shapeSupportsNarrow, shapeSupportsSlope, SLOPE_MIN_END, slopeAlongWidth, slopeEndHeight, slopeSidesFor } from "@/lib/slopeAlong";
+import { maxSideDrop, narrowCrossWidth, narrowEndWidth, normalizeNarrowStart, normalizeSlopeCurve, normalizeSlopeFrom, normalizeSlopeSide, shapeSupportsNarrow, shapeSupportsSlope, SLOPE_MIN_END, slopeAlongWidth, slopeEndHeight, slopeSidesFor } from "@/lib/slopeAlong";
 import type { BentTubeInnerProfile, BentTubeProfile, CustomSnapGrid, GearType, GridfinityCompartmentLabel, GridfinityType, GridSize, MeasurementAccuracy, ShapeCustomization, SketchProfile, SketchStroke, SketchStrokeAlign, SketchStrokeJoin, ThreadDrive, ThreadHead, ThreadProfile, ThreadRole, WorkplaneShape, WorkplaneWorkspaceSettings } from "@/types/layerling";
 import { selectWholeValue } from "@/lib/numberField";
 import { formulaMatchesValue, formulaToRemember, withFieldFormula, type FieldFormulas } from "@/lib/fieldFormulas";
@@ -366,7 +375,7 @@ import { canToggleGroupColors, groupShowsPartColors } from "@/lib/groupColors";
 import { groupCanKeepParts, offersGroupResize } from "@/lib/groupScale";
 import { shapePivotFromWorld, shapePivotWorld } from "@/lib/rotationPivot";
 import { signedDegrees } from "@/lib/geometryRotation";
-import { orientedMeasures, withOrientedMeasures } from "@/lib/orientedMeasures";
+import { isPlainMeasure, orientedMeasures, withOrientedMeasures } from "@/lib/orientedMeasures";
 import { tubeAfterInner, tubeAfterOuter, tubeInnerDiameter } from "@/lib/tubeDiameters";
 import { WASHER_SIZE_ORDER, isWasherSize, washerSizeFor, washerTubeFields } from "@/lib/washerSizes";
 import { finishingWasherFields, finishingWasherSizeFor, finishingWasherSizes, isFinishingWasherSize, isScrewHoleSize, screwHoleFields, screwHoleSizeFor, screwHoleSizesFor } from "@/lib/screwHoleSizes";
@@ -542,6 +551,8 @@ type TogglePropertyConfig = {
   layout?: "sides";
   /** Its place in that layout, named rather than counted: the row takes the class check-property-{area}. */
   area?: GridfinityWall;
+  /** A switch that belongs to the slider just above it: drawn a little in, with a small connecting line. */
+  sub?: boolean;
   onChange: (value: boolean) => void;
 };
 
@@ -552,6 +563,8 @@ type TextPropertyConfig = {
   value: string;
   /** A line under the row, as a range row has. */
   hint?: string;
+  /** How many characters the field takes; 24 when not given (a Gridfinity label shelf). */
+  maxLength?: number;
   onChange: (value: string) => void;
 };
 
@@ -572,6 +585,8 @@ type SelectPropertyConfig = {
   hint?: string;
   /** The words a font picker draws every font with: set, the entries are fonts and the field is a picker, not a plain select. */
   fontSample?: string;
+  /** Greyed out on its own, the hint saying why (a letter edge on a long text). */
+  disabled?: boolean;
   onChange: (value: string) => void;
 };
 
@@ -588,7 +603,11 @@ type ColorPropertyConfig = {
 };
 
 type ShapePropertyConfig = RangePropertyConfig | TextPropertyConfig | SelectPropertyConfig | TogglePropertyConfig | ColorPropertyConfig;
-export type ShapeInspectorUpdateOptions = { resizeAxis?: "width" | "depth" | "height" };
+/**
+ * `angle`: the measure typed is an angle that changes the body's form through one size (a wedge's slope, a teardrop's tip),
+ * so "Keep proportions" leaves the other sizes alone; scaled along, the angle stayed as it was (#1763).
+ */
+export type ShapeInspectorUpdateOptions = { resizeAxis?: "width" | "depth" | "height"; angle?: boolean };
 type ShapeInspectorUpdate = (patch: Partial<WorkplaneShape>, options?: ShapeInspectorUpdateOptions) => void;
 
 function clamp(value: number, min: number, max: number) {
@@ -620,7 +639,7 @@ function scrollingAncestor(element: HTMLElement): HTMLElement | null {
 }
 
 function propertyUsesLengthUnit(key: string) {
-  return ["textLineWidth", "textBlockGap", "textEdgeSize", "letterSize", "iconWidth", "keyringDiameter", "keyringAlong", "positionX", "positionY", "positionZ", "pivotX", "pivotY", "pivotZ", "radius", "length", "width", "height", "bevel", "topRadius", "baseRadius", "curvedConeTop", "thickness", "outerDiameter", "innerDiameter", "textRadius", "extrudeTopOffsetX", "extrudeTopOffsetZ", "toothSize", "toothWidth", "gearBacklash", "centerHole", "slotSmallEnd", "slotCentreDistance", "torusTube", "sketchLineWidth", "sketchCuttingEdge", "topLength", "topWidth", "bottomLength", "bottomWidth", "diameter", "pitch", "clearance", "axialClearance", "boltClearance", "threadDepth", "threadCoreDiameter", "threadLength", "headHeight", "headDiameter", "collarHeight", "collarDiameter", "driveSize", "driveDepth", "chamfer", "chamferBottom", "headChamfer", "wire", "starOuterSize", "starInnerSize", "starOuterFillet", "starInnerFillet", "heartTipFillet", "crescentThickness", "crescentTipFillet", "honeycombCellSize", "honeycombWallThickness", "honeycombFrameWidth", "cornerFillet", "topBottomFillet", "bentTubeSize", "bentTubeWall", "bentTubeSegmentLength", "bentTubeBendRadius", "dovetailNeckWidth", "dovetailClearance", "screwBossHole", "screwBossHoleDepth", "screwBossDiameter", "screwBossGussetHeight", "screwBossGussetThickness", "screwBossReach", "snapFitThickness", "snapFitUndercut", "snapFitClearance", "snapFitFoot", "ribLength", "ribThickness", "ribFootThickness", "portClearance", "hingePinDiameter", "hingeLeafThickness", "hingeClearance", "hingeCornerRadius", "hingeScrewDiameter", "hingeScrewSpacing", "hingeScrewAcross", "hingeNutWidth", "screwHoleShaft", "screwHoleHeadDepth", "knurlDepth", "knurlChamfer", "loftBottomWidth", "loftBottomDepth", "loftTopWidth", "loftTopDepth", "loftBottomCorner", "loftTopCorner", "loftOffsetX", "loftOffsetZ", "loftWall", "loftSectionHeight", "loftSectionWidth", "loftSectionDepth", "loftSectionCorner", "loftSectionOffsetX", "loftSectionOffsetZ", "gridfinityLabelBackLength", "gridfinityLabelBackOffset", "gridfinityLabelBackWidth", "gridfinityLabelCornerSize", "gridfinityLabelTextSize", "gridfinityLabelFrontLength", "gridfinityLabelFrontOffset", "gridfinityLabelFrontWidth", "gridfinityLabelLeftLength", "gridfinityLabelLeftOffset", "gridfinityLabelLeftWidth", "gridfinityLabelRightLength", "gridfinityLabelRightOffset", "gridfinityLabelRightWidth", "gridfinityScoopRadius", "gridfinityFloorHeight", "gridfinityLipChamfer", "gridfinityWallThickness", "gridfinityDrawerWidth", "gridfinityDrawerDepth", "gridfinityPaddingBack", "gridfinityPaddingFront", "gridfinityPaddingLeft", "gridfinityPaddingRight", "gridfinityCornerRadius", "gridfinityBinCornerRadius", "gridfinitySwallowtailClearance", "gridfinityDividerThickness", "gridfinityDividerPositionX", "gridfinityDividerPositionZ", "gridfinityCompartmentLabelWidth", "gridfinityOpeningCornerSize", "gridfinityOpeningDepthBack", "gridfinityOpeningDepthFront", "gridfinityOpeningDepthLeft", "gridfinityOpeningDepthRight", "gridfinityOpeningWidthBack", "gridfinityOpeningWidthFront", "gridfinityOpeningWidthLeft", "gridfinityOpeningWidthRight", "gridfinityOpeningDistanceBack", "gridfinityOpeningDistanceFront", "gridfinityOpeningDistanceLeft", "gridfinityOpeningDistanceRight", "surfaceSpacing", "surfaceDepth", "surfaceFade", "surfaceCrackWidth", "surfaceCrackRecess", "surfaceTextSize", "surfaceCarbonCross", "surfaceBrickHeight", "surfaceBrickJoint", "surfaceTimberHeight", "surfaceTimberBeam", "surfaceStoneJoint", "surfaceTileGap", "surfaceRingWidth", "surfaceTileHeight", "vase.wall", "vase.bottom", "vase.ribDepth", "vase.stripeDepth", "vase.voronoiCell", "vase.voronoiGap", "vase.voronoiDepth", "vase.waveAmplitude", "vaseFloor.drainDiameter", "vaseFloor.floorSlope", "vaseFloor.footHeight", "vaseFloor.rubberFootDiameter", "vaseFloor.rubberFootDepth", "vaseFloor.cutoutSize", "vaseFloor.cutoutWeb", "vaseFloor.lampHole", "vaseFloor.puckDiameter", "vaseFloor.lampNotch", "vaseFloor.lampNotchHeight", "vaseFloor.reinforceDepth", "vaseFloor.slitWidth", "vaseFloor.lineWidth", "vasePrint.lineWidth", "vaseParts.legHeight", "vaseParts.legDiameter", "vaseParts.saucerHeight", "vaseParts.saucerGap", "vaseParts.saucerWall", "vaseParts.insertWall", "vaseParts.insertStandoff", "vaseParts.reservoirHeight", "vaseParts.frogHole", "vaseParts.tubeDiameter", "vaseParts.lidClearance", "vaseParts.lidThickness", "vaseParts.lidDepth", "vaseParts.lidHeight", "vaseParts.lidJoint", "vaseParts.threadPitch", "vaseParts.fitClearance"].includes(key);
+  return ["textLineWidth", "textBlockGap", "textEdgeSize", "letterSize", "iconWidth", "keyringDiameter", "keyringAlong", "positionX", "positionY", "positionZ", "pivotX", "pivotY", "pivotZ", "radius", "length", "width", "height", "bevel", "topRadius", "baseRadius", "curvedConeTop", "thickness", "outerDiameter", "innerDiameter", "textRadius", "extrudeTopOffsetX", "extrudeTopOffsetZ", "toothSize", "toothWidth", "gearBacklash", "centerHole", "slotSmallEnd", "slotCentreDistance", "torusTube", "sketchLineWidth", "sketchCuttingEdge", "topLength", "topWidth", "bottomLength", "bottomWidth", "diameter", "pitch", "clearance", "axialClearance", "boltClearance", "threadDepth", "threadCoreDiameter", "threadLength", "headHeight", "headDiameter", "collarHeight", "collarDiameter", "driveSize", "driveDepth", "chamfer", "chamferBottom", "headChamfer", "wire", "starOuterSize", "starInnerSize", "starOuterFillet", "starInnerFillet", "heartTipFillet", "crescentThickness", "crescentTipFillet", "honeycombCellSize", "honeycombWallThickness", "honeycombFrameWidth", "cornerFillet", "topBottomFillet", "bentTubeSize", "bentTubeInner", "bentTubeWall", "bentTubeSegmentLength", "bentTubeBendRadius", "dovetailNeckWidth", "dovetailClearance", "screwBossHole", "screwBossHoleDepth", "screwBossDiameter", "screwBossGussetHeight", "screwBossGussetThickness", "screwBossReach", "snapFitThickness", "snapFitUndercut", "snapFitClearance", "snapFitFoot", "ribLength", "ribThickness", "ribFootThickness", "portClearance", "hingePinDiameter", "hingeLeafThickness", "hingeClearance", "hingeCornerRadius", "hingeScrewDiameter", "hingeScrewSpacing", "hingeScrewAcross", "hingeNutWidth", "hingeSnapGrip", "screwHoleShaft", "screwHoleHeadDepth", "screwHoleSlotLength", "screwHoleRecess", "screwHoleChamfer", "screwHoleLengthBelowHead", "knurlDepth", "knurlChamfer", "loftBottomWidth", "loftBottomDepth", "loftTopWidth", "loftTopDepth", "loftBottomCorner", "loftTopCorner", "loftOffsetX", "loftOffsetZ", "loftWall", "loftTopWall", "loftSectionHeight", "loftSectionWidth", "loftSectionDepth", "loftSectionCorner", "loftSectionOffsetX", "loftSectionOffsetZ", "gridfinityLabelBackLength", "gridfinityLabelBackOffset", "gridfinityLabelBackWidth", "gridfinityLabelCornerSize", "gridfinityLabelTextSize", "gridfinityLabelFrontLength", "gridfinityLabelFrontOffset", "gridfinityLabelFrontWidth", "gridfinityLabelLeftLength", "gridfinityLabelLeftOffset", "gridfinityLabelLeftWidth", "gridfinityLabelRightLength", "gridfinityLabelRightOffset", "gridfinityLabelRightWidth", "gridfinityScoopRadius", "gridfinityFloorHeight", "gridfinityLipChamfer", "gridfinityWallThickness", "gridfinityDrawerWidth", "gridfinityDrawerDepth", "gridfinityPaddingBack", "gridfinityPaddingFront", "gridfinityPaddingLeft", "gridfinityPaddingRight", "gridfinityCornerRadius", "gridfinityBinCornerRadius", "gridfinitySwallowtailClearance", "gridfinityDividerThickness", "gridfinityDividerPositionX", "gridfinityDividerPositionZ", "gridfinityCompartmentLabelWidth", "gridfinityOpeningCornerSize", "gridfinityOpeningDepthBack", "gridfinityOpeningDepthFront", "gridfinityOpeningDepthLeft", "gridfinityOpeningDepthRight", "gridfinityOpeningWidthBack", "gridfinityOpeningWidthFront", "gridfinityOpeningWidthLeft", "gridfinityOpeningWidthRight", "gridfinityOpeningDistanceBack", "gridfinityOpeningDistanceFront", "gridfinityOpeningDistanceLeft", "gridfinityOpeningDistanceRight", "surfaceSpacing", "surfaceDepth", "surfaceFade", "surfaceCrackWidth", "surfaceCrackRecess", "surfaceTextSize", "surfaceCarbonCross", "surfaceBrickHeight", "surfaceBrickJoint", "surfaceTimberHeight", "surfaceTimberBeam", "surfaceStoneJoint", "surfaceTileGap", "surfaceRingWidth", "surfaceTileHeight", "vase.wall", "vase.bottom", "vase.ribDepth", "vase.stripeDepth", "vase.voronoiCell", "vase.voronoiGap", "vase.voronoiDepth", "vase.waveAmplitude", "vaseFloor.drainDiameter", "vaseFloor.floorSlope", "vaseFloor.footHeight", "vaseFloor.rubberFootDiameter", "vaseFloor.rubberFootDepth", "vaseFloor.cutoutSize", "vaseFloor.cutoutWeb", "vaseFloor.lampHole", "vaseFloor.puckDiameter", "vaseFloor.lampNotch", "vaseFloor.lampNotchHeight", "vaseFloor.reinforceDepth", "vaseFloor.slitWidth", "vaseFloor.lineWidth", "vasePrint.lineWidth", "vaseParts.legHeight", "vaseParts.legDiameter", "vaseParts.saucerHeight", "vaseParts.saucerGap", "vaseParts.saucerWall", "vaseParts.insertWall", "vaseParts.insertStandoff", "vaseParts.reservoirHeight", "vaseParts.frogHole", "vaseParts.tubeDiameter", "vaseParts.lidClearance", "vaseParts.lidThickness", "vaseParts.lidDepth", "vaseParts.lidHeight", "vaseParts.lidJoint", "vaseParts.threadPitch", "vaseParts.fitClearance"].includes(key);
 }
 
 /**
@@ -749,7 +768,7 @@ type ShapePropertyView = {
 };
 const NO_PROPERTY_VIEW: ShapePropertyView = { loftSection: 0, setLoftSection: () => undefined };
 
-function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeInspectorUpdate, textWidthMax = 260, view: ShapePropertyView = NO_PROPERTY_VIEW): ShapePropertyConfig[] {
+function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeInspectorUpdate, view: ShapePropertyView = NO_PROPERTY_VIEW): ShapePropertyConfig[] {
   const baseWidth = shapeWidth(shape);
   const baseDepth = shapeDepth(shape);
   const footprint = shapeOverallFootprintDimensions(shape);
@@ -794,9 +813,10 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
     patch.depth = patch.width ?? value;
     onUpdate(patch, { resizeAxis: "width" });
   };
+  // A radius is a circle's: width and length both follow it (#1476); before, only the width did and the cone went oval.
   const setBaseRadius = (value: number) => {
     const diameter = value * 2;
-    onUpdate({ baseRadius: value, width: diameter, size: resizedShapeSize(diameter, baseDepth) }, { resizeAxis: "width" });
+    onUpdate({ baseRadius: value, width: diameter, depth: diameter, size: resizedShapeSize(diameter, diameter) }, { resizeAxis: "width" });
   };
   const setHeight = (height: number) => onUpdate({ height }, { resizeAxis: "height" });
 
@@ -811,8 +831,23 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
         ? [{ id: "turns", label: t("prop.turns"), value: settings.sweepAngle / 360, min: -MAX_SKETCH_REVOLVE_TURNS, max: MAX_SKETCH_REVOLVE_TURNS, step: 0.25, onChange: (turns: number) => updateRevolve({ sweepAngle: turns * 360 }) }]
         : [{ id: "sweep", label: t("prop.sweep"), value: settings.sweepAngle, min: -360, max: 360, step: 1, onChange: (sweepAngle: number) => updateRevolve({ sweepAngle }) }]),
       { id: "pitch", label: t("prop.pitch"), value: settings.pitch ?? 0, min: 0, max: 100, step: 0.05, onChange: (pitch: number) => updateRevolve({ pitch, sweepAngle: pitch > 0 ? settings.sweepAngle : Math.max(-360, Math.min(360, settings.sweepAngle)) }) },
-      // An exact revolved body is round at any size; the side count only shapes the mesh of an older one.
-      ...(shape.cadBrep ? [] : [{ id: "sides", label: t("prop.sides"), value: settings.sides, min: 3, max: MAX_HIGH_RESOLUTION_SIDES, step: 1, onChange: (sides: number) => updateRevolve({ sides }) }]),
+      // An exact revolved body is round at any size; the side count only shapes the mesh of an older one. The exact
+      // one is cut into facets as finely as its smoothness asks (Discussion #1426).
+      ...(shape.cadBrep
+        ? [{
+            type: "select" as const,
+            id: "revolveSmoothness",
+            label: t("prop.revolveSmoothness"),
+            value: settings.smoothness ?? "standard",
+            options: [
+              { value: "standard", label: t("prop.revolveSmoothnessStandard") },
+              { value: "fine", label: t("prop.revolveSmoothnessFine") },
+              { value: "extraFine", label: t("prop.revolveSmoothnessExtraFine") },
+            ],
+            hint: t("prop.revolveSmoothnessHint"),
+            onChange: (value: string) => updateRevolve({ smoothness: value === "fine" || value === "extraFine" ? value : undefined }),
+          }]
+        : [{ id: "sides", label: t("prop.sides"), value: settings.sides, min: 3, max: MAX_HIGH_RESOLUTION_SIDES, step: 1, onChange: (sides: number) => updateRevolve({ sides }) }]),
       { id: "length", label: t("prop.length"), value: depth, min: MIN_SHAPE_SIZE, max: 160, onChange: setDepth },
       { id: "width", label: t("prop.width"), value: width, min: MIN_SHAPE_SIZE, max: 160, onChange: setWidth },
       { id: "height", label: t("prop.height"), value: shape.height, min: MIN_SHAPE_SIZE, max: 160, onChange: setHeight },
@@ -1033,6 +1068,7 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
     const wallLimits = bentTubeWallLimits(fields.bentTubeProfile, fields.bentTubeInnerProfile, fields.bentTubeSize, fields.bentTubeQuality);
     const update = (changes: Partial<WorkplaneShape>) => onUpdate(bentTubeParameterPatch(shape, changes));
     const profileOptions = BENT_TUBE_PROFILE_OPTIONS.map((option) => ({ value: option.value, label: t(option.label) }));
+    const round = fields.bentTubeProfile === "round";
     const properties: ShapePropertyConfig[] = [
       {
         type: "select",
@@ -1050,9 +1086,20 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
         options: [{ value: "none", label: t("bentTube.innerNone") }, ...profileOptions],
         onChange: (value) => update({ bentTubeInnerProfile: value as BentTubeInnerProfile }),
       },
+      // Quality sits where Sides sits on the plain tube (#1724): first, before the sizes.
+      {
+        id: "bentTubeQuality",
+        label: t("prop.quality"),
+        value: fields.bentTubeQuality,
+        min: MIN_BENT_TUBE_QUALITY,
+        max: MAX_BENT_TUBE_QUALITY,
+        step: 4,
+        onChange: (value) => update({ bentTubeQuality: value }),
+      },
+      // A round profile is measured by its diameter, an angular one across its flats (#1724).
       {
         id: "bentTubeSize",
-        label: t("prop.bentTubeSize"),
+        label: t(round ? "prop.outerDiameter" : "prop.bentTubeAcrossFlats"),
         value: fields.bentTubeSize,
         min: MIN_BENT_TUBE_SIZE,
         max: 100,
@@ -1060,6 +1107,19 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
         onChange: (value) => update({ bentTubeSize: value }),
       },
     ];
+    // With the same profile inside the wall is even, so the opening has one size of its own, as on
+    // the plain tube: typing it sets the wall from the outer size (#1724).
+    if (fields.bentTubeInnerProfile === fields.bentTubeProfile) {
+      properties.push({
+        id: "bentTubeInner",
+        label: t(round ? "prop.innerDiameter" : "prop.bentTubeInnerAcrossFlats"),
+        value: Math.max(0, fields.bentTubeSize - 2 * fields.bentTubeWall),
+        min: Math.max(0, fields.bentTubeSize - 2 * wallLimits.max),
+        max: Math.max(0, fields.bentTubeSize - 2 * wallLimits.min),
+        step: 0.1,
+        onChange: (inner) => update({ bentTubeWall: clamp((fields.bentTubeSize - inner) / 2, wallLimits.min, wallLimits.max) }),
+      });
+    }
     if (fields.bentTubeInnerProfile !== "none") {
       properties.push({
         id: "bentTubeWall",
@@ -1074,15 +1134,6 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
     if (fields.bentTubeInnerProfile !== "none") {
       properties.push({ type: "toggle" as const, id: "tubeBoreHole", label: t("prop.tubeBoreHole"), value: shape.tubeBoreHole === true, onChange: (value: boolean) => onUpdate({ tubeBoreHole: value || undefined }) });
     }
-    properties.push({
-      id: "bentTubeQuality",
-      label: t("prop.quality"),
-      value: fields.bentTubeQuality,
-      min: MIN_BENT_TUBE_QUALITY,
-      max: MAX_BENT_TUBE_QUALITY,
-      step: 4,
-      onChange: (value) => update({ bentTubeQuality: value }),
-    });
     return properties;
   }
 
@@ -1092,25 +1143,86 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
     const roundedBoxQuality = shape.roundedBoxQuality ?? DEFAULT_ROUNDED_BOX_QUALITY;
     const maxCornerFillet = Math.max(1, Math.min(width, depth) / 2);
     const maxTopBottomFillet = Math.max(1, shape.height / 2);
+    // Top and bottom on their own: each can go as far as the other one leaves room for.
+    const endsSeparate = shape.bottomFillet !== undefined;
+    const [topFillet, bottomFillet] = normalizeEndFillets(topBottomFillet, shape.bottomFillet, shape.height);
+    const endRows: ShapePropertyConfig[] = endsSeparate
+      ? [
+          {
+            id: "topFillet",
+            label: t("prop.topFillet"),
+            value: topFillet,
+            min: 0,
+            max: Math.max(1, shape.height - bottomFillet),
+            step: 0.05,
+            onChange: (value) => onUpdate({ topBottomFillet: normalizeEndFillets(value, bottomFillet, shape.height)[0] }),
+          },
+          {
+            id: "bottomFillet",
+            label: t("prop.bottomFillet"),
+            value: bottomFillet,
+            min: 0,
+            max: Math.max(1, shape.height - topFillet),
+            step: 0.05,
+            onChange: (value) => onUpdate({ bottomFillet: normalizeEndFillets(topFillet, value, shape.height)[1] }),
+          },
+        ]
+      : [{
+          id: "topBottomFillet",
+          label: t("prop.topBottomFillet"),
+          value: topBottomFillet,
+          min: 0,
+          max: maxTopBottomFillet,
+          step: 0.05,
+          onChange: (value) => onUpdate({ topBottomFillet: normalizeTopBottomFillet(value, shape.height / 2) }),
+        }];
+
+    // Own radii for each corner: with flat ends only (rounded ends round every corner alike).
+    const flatEnds = topBottomFillet <= 1e-4;
+    const ownCorners = flatEnds ? normalizeCornerFillets(shape.cornerFillets, Math.min(width, depth) / 2) : undefined;
+    const sharedRadius = normalizeCornerFillet(cornerFillet, Math.min(width, depth) / 2);
+    const cornerRows: ShapePropertyConfig[] = ownCorners
+      ? (["backLeft", "backRight", "frontRight", "frontLeft"] as const).map((name, index) => ({
+          id: `cornerFillet-${name}`,
+          label: t(`prop.corner.${name}`),
+          value: ownCorners[index],
+          min: 0,
+          max: maxCornerFillet,
+          step: 0.05,
+          onChange: (value: number) => onUpdate({ cornerFillets: ownCorners.map((radius, at) => (at === index ? normalizeCornerFillet(value, Math.min(width, depth) / 2) : radius)) as [number, number, number, number] }),
+        }))
+      : [{
+          id: "cornerFillet",
+          label: t("prop.cornerFillet"),
+          value: cornerFillet,
+          min: 0,
+          max: maxCornerFillet,
+          step: 0.05,
+          onChange: (value: number) => onUpdate({ cornerFillet: normalizeCornerFillet(value, Math.min(width, depth) / 2) }),
+        }];
 
     return [
+      ...cornerRows,
       {
-        id: "cornerFillet",
-        label: t("prop.cornerFillet"),
-        value: cornerFillet,
-        min: 0,
-        max: maxCornerFillet,
-        step: 0.05,
-        onChange: (value) => onUpdate({ cornerFillet: normalizeCornerFillet(value, Math.min(width, depth) / 2) }),
+        type: "toggle",
+        id: "cornerSeparate",
+        sub: true,
+        label: t("prop.cornerSeparate"),
+        value: Boolean(ownCorners),
+        disabled: !flatEnds,
+        onChange: (separate) => onUpdate({ cornerFillets: separate ? [sharedRadius, sharedRadius, sharedRadius, sharedRadius] : undefined }),
       },
+      ...endRows,
       {
-        id: "topBottomFillet",
-        label: t("prop.topBottomFillet"),
-        value: topBottomFillet,
-        min: 0,
-        max: maxTopBottomFillet,
-        step: 0.05,
-        onChange: (value) => onUpdate({ topBottomFillet: normalizeTopBottomFillet(value, shape.height / 2) }),
+        type: "toggle" as const,
+        id: "endsSeparate",
+        sub: true,
+        label: t("prop.endsSeparate"),
+        value: endsSeparate,
+        // On, the bottom starts as the top was, so nothing changes shape; off, both take the top's radius again.
+        onChange: (value: boolean) => onUpdate(value
+          ? { bottomFillet: normalizeTopBottomFillet(topBottomFillet, shape.height / 2) }
+          : { topBottomFillet: normalizeTopBottomFillet(topFillet, shape.height / 2), bottomFillet: undefined }),
       },
       {
         id: "roundedBoxQuality",
@@ -1128,25 +1240,37 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
   }
 
   if (shape.kind === "counterbore" || shape.kind === "countersink" || shape.kind === "doubleCountersink") {
-    const shaft = normalizeScrewHoleShaft(shape.screwHoleShaft, width);
+    // A slotted hole (Discussion #1531): the shorter side is the head, the difference the slot along the longer one.
+    const slot = shape.screwHoleSlot ? screwHoleSlotMeasures(width, depth) : null;
+    const head = slot ? slot.head : width;
+    /** Width and depth for a head and a slot length, the slot staying along the side it runs along (round without one). */
+    const slotSize = (nextHead: number, length: number | null): Partial<WorkplaneShape> => {
+      const along = length === null ? 0 : Math.max(0, length);
+      const nextWidth = slot?.alongX !== false ? nextHead + along : nextHead;
+      const nextDepth = slot?.alongX === false ? nextHead + along : nextHead;
+      return { width: nextWidth, depth: nextDepth, size: resizedShapeSize(nextWidth, nextDepth) };
+    };
+    const shaft = normalizeScrewHoleShaft(shape.screwHoleShaft, head);
     const shaftProperty: ShapePropertyConfig = {
       id: "screwHoleShaft",
       label: t("prop.screwHoleShaft"),
       value: shaft,
       min: 0.1,
-      max: Math.max(0.2, width * 0.95),
+      max: Math.max(0.2, head * 0.95),
       step: 0.1,
-      onChange: (value) => onUpdate({ screwHoleShaft: normalizeScrewHoleShaft(value, width) }),
+      onChange: (value) => onUpdate({ screwHoleShaft: normalizeScrewHoleShaft(value, head) }),
     };
     // A screw size sets shaft, head and its depth or angle at once (ISO 273, DIN 974-1, ISO 15065); the length stays.
     const holeKind = shape.kind;
     const applyScrewHoleSize = (value: string) => {
       if (!isScrewHoleSize(value, holeKind)) return;
       const fields = screwHoleFields(holeKind, value, shape.height);
-      onUpdate({ ...fields, ...widthPatch(fields.width), depth: fields.depth, size: resizedShapeSize(fields.width, fields.depth) }, { resizeAxis: "width" });
+      // A slot keeps its length: only the head changes.
+      if (slot) onUpdate({ ...fields, ...slotSize(fields.width, slot.length) }, { resizeAxis: "width" });
+      else onUpdate({ ...fields, ...widthPatch(fields.width), depth: fields.depth, size: resizedShapeSize(fields.width, fields.depth) }, { resizeAxis: "width" });
     };
     const screwHoleSize = screwHoleSizeFor(holeKind, {
-      width,
+      width: head,
       screwHoleShaft: shaft,
       screwHoleHeadDepth: normalizeScrewHoleHeadDepth(shape.screwHoleHeadDepth, shape.height),
       screwHoleAngle: normalizeScrewHoleAngle(shape.screwHoleAngle),
@@ -1164,7 +1288,9 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
         hint: t(holeKind === "counterbore" ? "prop.screwHoleSizeCounterboreHint" : "prop.screwHoleSizeCountersinkHint"),
         onChange: applyScrewHoleSize,
       },
-      { id: "width", label: t("prop.screwHoleHead"), value: width, min: MIN_SHAPE_SIZE, max: 160, onChange: setCylinderDiameter },
+      slot
+        ? { id: "width", label: t("prop.screwHoleHead"), value: head, min: MIN_SHAPE_SIZE, max: 160, onChange: (value: number) => onUpdate(slotSize(value, slot.length), { resizeAxis: "width" }) }
+        : { id: "width", label: t("prop.screwHoleHead"), value: width, min: MIN_SHAPE_SIZE, max: 160, onChange: setCylinderDiameter },
       shaftProperty,
       shape.kind === "counterbore"
         ? {
@@ -1185,13 +1311,72 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
             step: 1,
             onChange: (value) => onUpdate({ screwHoleAngle: normalizeScrewHoleAngle(value) }),
           },
+      // A counterbore's rim may be chamfered (Discussion #1632), a countersink's head recessed (Discussion #1531).
+      ...(shape.kind === "counterbore"
+        ? [{
+            id: "screwHoleChamfer",
+            label: t("prop.screwHoleChamfer"),
+            value: normalizeScrewHoleChamfer(shape.screwHoleChamfer, shape.height, shape.screwHoleHeadDepth, holeKind),
+            min: 0,
+            max: maxScrewHoleChamfer(shape.height, shape.screwHoleHeadDepth, holeKind),
+            step: 0.1,
+            hint: t("prop.screwHoleChamferHint"),
+            onChange: (value: number) => onUpdate({ screwHoleChamfer: normalizeScrewHoleChamfer(value, shape.height, shape.screwHoleHeadDepth, holeKind) || undefined }),
+          }]
+        : [{
+            id: "screwHoleRecess",
+            label: t("prop.screwHoleRecess"),
+            value: normalizeScrewHoleRecess(shape.screwHoleRecess, shape.height, holeKind),
+            min: 0,
+            max: maxScrewHoleRecess(shape.height, holeKind),
+            step: 0.1,
+            hint: t("prop.screwHoleRecessHint"),
+            onChange: (value: number) => onUpdate({ screwHoleRecess: normalizeScrewHoleRecess(value, shape.height, holeKind) || undefined }),
+          }]),
       { id: "height", label: t("prop.screwHoleLength"), value: shape.height, min: MIN_SHAPE_SIZE, max: 160, onChange: setHeight },
+      // Socket head cap screws are sold by the length under the head (Discussion #1670): the pocket is added to it.
+      ...(shape.kind === "counterbore"
+        ? [{
+            id: "screwHoleLengthBelowHead",
+            label: t("prop.screwHoleLengthBelowHead"),
+            value: screwHoleLengthBelowHead(shape.height, shape.screwHoleHeadDepth),
+            min: 0.2,
+            max: Math.max(0.3, 160 - normalizeScrewHoleHeadDepth(shape.screwHoleHeadDepth, shape.height)),
+            hint: t("prop.screwHoleLengthBelowHeadHint"),
+            onChange: (value: number) => setHeight(screwHoleHeightForLengthBelowHead(value, shape.screwHoleHeadDepth)),
+          }]
+        : []),
       // A blind one may end in a drill point below its shaft (Discussion #621); the double countersink goes through.
       ...drillPointProperties(shape, onUpdate),
       // One entry in the library for both: the double countersink is the countersink chamfered on both faces (#621).
       ...(shape.kind === "counterbore"
         ? []
         : [{ type: "toggle" as const, id: "screwHoleBothSides", label: t("prop.screwHoleBothSides"), value: shape.kind === "doubleCountersink", onChange: (value: boolean) => onUpdate({ kind: value ? "doubleCountersink" : "countersink" }) }]),
+      // A slot for lining the part up before the screw is tightened (Discussion #1531): on, it starts as long as the head
+      // is wide, along the width; off, the hole is round again at the head's diameter.
+      {
+        type: "toggle" as const,
+        id: "screwHoleSlot",
+        label: t("prop.screwHoleSlot"),
+        value: Boolean(slot),
+        onChange: (value: boolean) => {
+          const roundHead = Math.min(width, depth);
+          if (value) onUpdate({ screwHoleSlot: true, width: roundHead * 2, depth: roundHead, size: resizedShapeSize(roundHead * 2, roundHead) }, { resizeAxis: "width" });
+          else onUpdate({ screwHoleSlot: undefined, width: roundHead, depth: roundHead, size: resizedShapeSize(roundHead, roundHead) }, { resizeAxis: "width" });
+        },
+      },
+      ...(slot
+        ? [{
+            id: "screwHoleSlotLength",
+            label: t("prop.screwHoleSlotLength"),
+            value: slot.length,
+            min: 0,
+            max: 200,
+            step: 0.1,
+            hint: t("prop.screwHoleSlotLengthHint"),
+            onChange: (value: number) => onUpdate(slotSize(head, value), { resizeAxis: slot.alongX ? "width" : "depth" }),
+          }]
+        : []),
       ...roundSideProperties(shape, width, depth, onUpdate),
     ];
   }
@@ -1271,7 +1456,7 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
         min: MIN_TEARDROP_TIP_ANGLE,
         max: MAX_TEARDROP_TIP_ANGLE,
         step: 1,
-        onChange: (value) => onUpdate({ height: teardropHeightForTipAngle(width, normalizeTeardropTipAngle(value)) }, { resizeAxis: "height" }),
+        onChange: (value) => onUpdate({ height: teardropHeightForTipAngle(width, normalizeTeardropTipAngle(value)) }, { resizeAxis: "height", angle: true }),
       },
       { id: "height", label: t("prop.height"), value: shape.height, min: MIN_SHAPE_SIZE, max: 160, onChange: setHeight },
       ...roundSideProperties(shape, width, width, onUpdate),
@@ -1824,11 +2009,22 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
         id: "hingeStyle",
         label: t("prop.hingeStyle"),
         value: plan.style,
-        options: [{ value: "pin", label: t("hinge.stylePin") }, { value: "pinless", label: t("prop.hingePinless") }, { value: "cone", label: t("hinge.styleCone") }, { value: "liftOff", label: t("hinge.styleLiftOff") }],
-        hint: plan.style === "cone" ? t("hinge.styleConeHint") : plan.style === "liftOff" ? t("hinge.styleLiftOffHint") : undefined,
+        options: [{ value: "pin", label: t("hinge.stylePin") }, { value: "pinless", label: t("prop.hingePinless") }, { value: "cone", label: t("hinge.styleCone") }, { value: "liftOff", label: t("hinge.styleLiftOff") }, { value: "snap", label: t("hinge.styleSnap") }],
+        hint: plan.style === "cone" ? t("hinge.styleConeHint") : plan.style === "liftOff" ? t("hinge.styleLiftOffHint") : plan.style === "snap" ? t("hinge.styleSnapHint") : undefined,
         // The old "without pin" switch is part of this choice now (#907).
-        onChange: (value) => onUpdate({ hingeStyle: value === "cone" || value === "pinless" || value === "liftOff" ? value : undefined, hingePinless: undefined }),
+        onChange: (value) => onUpdate({ hingeStyle: value === "cone" || value === "pinless" || value === "liftOff" || value === "snap" ? value : undefined, hingePinless: undefined }),
       },
+      // The snap hinge: how much narrower the clips' opening is than the pin, and what that makes it (#1520).
+      ...(plan.style === "snap" ? [{
+        id: "hingeSnapGrip",
+        label: t("prop.hingeSnapGrip"),
+        value: plan.snapGrip,
+        min: MIN_HINGE_SNAP_GRIP,
+        max: MAX_HINGE_SNAP_GRIP,
+        step: 0.05,
+        hint: t("prop.hingeSnapGripHint", { opening: plainNumber(2 * plan.snapHalf), pin: plainNumber(2 * plan.pinRadius) }),
+        onChange: (value: number) => onUpdate({ hingeSnapGrip: normalizeHingeSnapGrip(value) }),
+      }] : []),
       ...(plan.style === "cone" ? [{
         id: "hingeConeSize",
         label: t("prop.hingeConeSize"),
@@ -2117,12 +2313,16 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
       { id: "loftOffsetX", label: t("prop.loftOffsetX"), value: m.offsetX, min: -150, max: 150, step: 0.5, onChange: (value) => change({ offsetX: value }) },
       { id: "loftOffsetZ", label: t("prop.loftOffsetZ"), value: m.offsetZ, min: -150, max: 150, step: 0.5, onChange: (value) => change({ offsetZ: value }) },
       { id: "loftWall", label: t("prop.loftWall"), value: m.wall, min: 0, max: Math.max(0.1, maxLoftWall(m)), step: 0.1, onChange: (value) => change({ wall: value }) },
+      // A tube can be thicker at one end than at the other (Forum 624069); a solid body has no wall to set.
+      ...(m.wall > 0
+        ? [{ id: "loftTopWall", label: t("prop.loftTopWall"), value: m.topWall, min: MIN_LOFT_TOP_WALL, max: Math.max(MIN_LOFT_TOP_WALL, maxLoftWall(m)), step: 0.1, hint: t("loft.topWallHint"), onChange: (value: number) => change({ topWall: value }) }]
+        : []),
       ...turns,
+      ...tilts,
       // How finely a circle or a rounded corner is drawn in the view and in the exports (#755); a polygon has its own sides.
       ...(rounded
         ? [{ id: "loftSegments", label: t("prop.loftSegments"), value: m.segments, min: MIN_LOFT_SEGMENTS, max: MAX_LOFT_SEGMENTS, step: 1, hint: t("loft.segmentsHint"), onChange: (value: number) => change({ segments: value }) }]
         : []),
-      ...tilts,
     ];
   }
 
@@ -2497,7 +2697,16 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
 
   if (shape.kind === "cone") {
     return [
-      { id: "topRadius", label: t("prop.topRadius"), value: shape.topRadius ?? 0, min: 0, max: 40, onChange: (topRadius) => onUpdate({ topRadius }) },
+      {
+        id: "topRadius",
+        label: t("prop.topRadius"),
+        value: shape.topRadius ?? 0,
+        min: 0,
+        max: 40,
+        onChange: (topRadius) => onUpdate({ topRadius }),
+        // Width and length are the base circle's; a top wider than the base reaches past them (#1477).
+        ...((shape.topRadius ?? 0) > (shape.baseRadius ?? baseWidth / 2) ? { hint: t("prop.coneTopRadiusHint") } : {}),
+      },
       { id: "baseRadius", label: t("prop.baseRadius"), value: shape.baseRadius ?? baseWidth / 2, min: MIN_SHAPE_SIZE, max: 80, onChange: setBaseRadius },
       { id: "length", label: t("prop.length"), value: depth, min: MIN_SHAPE_SIZE, max: 160, onChange: setDepth },
       { id: "width", label: t("prop.width"), value: width, min: MIN_SHAPE_SIZE, max: 160, onChange: setConeWidth },
@@ -2584,6 +2793,24 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
     ];
   }
 
+  if (shape.kind === "wedge") {
+    // The slope's angle beside the sizes (Discussion #1714): typed, it sets the height for the width as it stands.
+    return [
+      { id: "length", label: t("prop.length"), value: depth, min: MIN_SHAPE_SIZE, max: 160, onChange: setDepth },
+      { id: "width", label: t("prop.width"), value: width, min: MIN_SHAPE_SIZE, max: 160, onChange: setWidth },
+      { id: "height", label: t("prop.height"), value: shape.height, min: MIN_SHAPE_SIZE, max: 160, onChange: setHeight },
+      {
+        id: "wedgeAngle",
+        label: t("prop.wedgeAngle"),
+        value: wedgeAngle(width, shape.height),
+        min: MIN_WEDGE_ANGLE,
+        max: MAX_WEDGE_ANGLE,
+        step: 1,
+        onChange: (angle) => onUpdate({ height: Math.max(MIN_SHAPE_SIZE, wedgeHeightForAngle(width, angle)) }, { resizeAxis: "height", angle: true }),
+      },
+    ];
+  }
+
   if (shape.kind === "roundRoof") {
     return [
       { id: "sides", label: t("prop.sides"), value: shape.sides ?? 64, min: 4, max: MAX_HIGH_RESOLUTION_SIDES, step: 1, onChange: (sides) => onUpdate({ sides: Math.round(sides) }) },
@@ -2604,6 +2831,15 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
       const inner = tubeInnerDiameter(width, wall);
       // A washer is a tube of its screw size's measures (ISO 7089, #1052): one choice sets all three.
       const applyWasher = (value: string) => {
+        if (value === "custom") {
+          // Custom and the arrow back to the default (#1739) give the tube the measures of a new one; a size left
+          // as it is would be the one it shows already.
+          const asset = shapeDefaultsAsset(shape.kind);
+          if (!asset) return;
+          const fresh = makeShapeFromAsset(asset);
+          onUpdate({ ...widthPatch(shapeWidth(fresh)), depth: shapeDepth(fresh), size: resizedShapeSize(shapeWidth(fresh), shapeDepth(fresh)), height: fresh.height, bevel: fresh.bevel }, { resizeAxis: "width" });
+          return;
+        }
         if (!isWasherSize(value)) return;
         const washer = washerTubeFields(value);
         onUpdate({ ...widthPatch(washer.width), depth: washer.depth, size: resizedShapeSize(washer.width, washer.depth), height: washer.height, bevel: washer.bevel }, { resizeAxis: "width" });
@@ -2644,14 +2880,14 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
             onUpdate({ ...widthPatch(next.outer), depth: next.outer, size: resizedShapeSize(next.outer, next.outer), bevel: next.wall }, { resizeAxis: "width" });
           },
         },
-        { id: "thickness", label: t("prop.thickness"), value: wall, min: 0.5, max: 20, onChange: (bevel) => onUpdate({ bevel: clamp(bevel, 0.5, wallLimit) }) },
+        { id: "thickness", label: t("prop.bentTubeWall"), value: wall, min: 0.5, max: 20, onChange: (bevel) => onUpdate({ bevel: clamp(bevel, 0.5, wallLimit) }) },
         { id: "height", label: t("prop.height"), value: shape.height, min: MIN_SHAPE_SIZE, max: 160, onChange: setHeight },
         { type: "toggle" as const, id: "tubeBoreHole", label: t("prop.tubeBoreHole"), value: shape.tubeBoreHole === true, onChange: (value: boolean) => onUpdate({ tubeBoreHole: value || undefined }) },
       ];
     }
     return [
       ...roundSideProperties(shape, width, depth, onUpdate),
-      { id: "thickness", label: t("prop.thickness"), value: wall, min: 0.5, max: 20, onChange: (bevel) => onUpdate({ bevel }) },
+      { id: "thickness", label: t("prop.bentTubeWall"), value: wall, min: 0.5, max: 20, onChange: (bevel) => onUpdate({ bevel }) },
       {
         id: "innerDiameter",
         label: t("prop.innerDiameter"),
@@ -3686,7 +3922,29 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
         onChange: (bevelHelixAngle) => onUpdate({ bevelHelixAngle: bevelHelixAngle || undefined }),
       });
     }
-    if (gearTypeHasHelix(shape.gearType) || (normalizeGearType(shape.gearType) === "bevel" && bevelGearIsSpiral(shape.bevelHelixAngle))) {
+    // A ring gear's or a rack's teeth can run at a slant, to run with a helical or herringbone gear (Discussion #1627);
+    // 0 keeps them straight.
+    if (modular) {
+      properties.push({
+        id: "ringRackHelixAngle",
+        label: t("prop.helixAngle"),
+        value: normalizeRingRackHelixAngle(shape.ringRackHelixAngle),
+        min: MIN_GEAR_HELIX_ANGLE,
+        max: MAX_GEAR_HELIX_ANGLE,
+        step: 1,
+        hint: t("inspector.ringRackHelixHint"),
+        onChange: (ringRackHelixAngle) => onUpdate({ ringRackHelixAngle: ringRackHelixAngle || undefined }),
+      });
+      if (ringRackIsHelical(shape)) properties.push({
+        type: "toggle",
+        id: "ringRackHerringbone",
+        label: t("prop.ringRackHerringbone"),
+        value: shape.ringRackHerringbone === true,
+        onChange: (ringRackHerringbone) => onUpdate({ ringRackHerringbone: ringRackHerringbone || undefined }),
+      });
+    }
+    // The ring gear's turn is drawn in steps like a helical gear's; the rack's slant needs none.
+    if (gearTypeHasHelix(shape.gearType) || (normalizeGearType(shape.gearType) === "bevel" && bevelGearIsSpiral(shape.bevelHelixAngle)) || (gearType === "internal" && ringRackIsHelical(shape))) {
       properties.push({
         id: "quality",
       label: t("prop.quality"),
@@ -3723,15 +3981,13 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
         id: "text",
         label: t("prop.text"),
         value: shape.text ?? "TEXT",
+        maxLength: MAX_TEXT_LENGTH,
         onChange: (text) => {
-          const nextText = text.slice(0, 24) || " ";
+          const nextText = limitedText(text);
           // Other words keep the letter size and the box follows the letters (#871): only the width was
-          // changed before, and the letters were stretched to fill the old depth.
+          // changed before, and the letters were stretched to fill the old depth. There is no width cap
+          // any more: a long text simply gets longer, and Letter size makes it smaller (Facebook, 07.11.2026).
           const sized = textLetterSizePatch({ ...shape, text: nextText } as WorkplaneShape, textLetterSize(shape));
-          if (typeof sized.width === "number" && sized.width > textWidthMax) {
-            onUpdate({ text: nextText, width: textWidthMax, size: textWidthMax });
-            return;
-          }
           // The baseline stays where it was (#871), so a tail reaches below the line instead of the letters sitting on the bottom of the box.
           const shift = textBaselineKeepShift(shape, { ...shape, text: nextText, ...sized } as WorkplaneShape);
           onUpdate({ text: nextText, ...sized, ...(shift ? { x: shape.x + shift.x, z: shape.z + shift.z } : {}) });
@@ -3745,7 +4001,7 @@ function getShapePropertiesWithAppLimits(shape: WorkplaneShape, onUpdate: ShapeI
       // The top edge of the letters (#499), as on a name tag; a rounded or chamfered edge takes the place of the bevel.
       ...textEdgeProperties(shape, onUpdate),
       // A fill mode or the silhouette draws the letters flat; bevel and segments belong to the filled letters.
-      ...(textHasFill(shape) || shape.textEdge ? [] : [
+      ...(textHasFill(shape) || textHasEdge(shape) ? [] : [
         { id: "bevel", label: t("prop.bevel"), value: shape.bevel ?? 0, min: 0, max: 8, onChange: (bevel: number) => onUpdate({ bevel }) },
         { id: "segments", label: t("prop.segments"), value: shape.segments ?? 0, min: 0, max: 24, step: 1, onChange: (segments: number) => onUpdate({ segments: Math.round(segments) }) },
       ] satisfies ShapePropertyConfig[]),
@@ -3870,6 +4126,20 @@ const TEXT_FILL_IN_VIEW_IDS = new Set(["textFill", "textLineWidth", "textCorners
 
 /** The letters' top edge, round or chamfered, and how large (#499): the setting the name tag has for its top layer. */
 function textEdgeProperties(shape: WorkplaneShape, onUpdate: ShapeInspectorUpdate): ShapePropertyConfig[] {
+  // A text longer than MAX_EDGED_TEXT_LENGTH takes no letter edge (its build would take a minute): the field is greyed
+  // out and says why; a setting it had stays, and comes back once the text is short enough again.
+  if (!textAllowsEdge(shape)) {
+    return [{
+      type: "select",
+      id: "textEdge",
+      label: t("nameTag.letterEdge"),
+      value: "none",
+      options: [{ value: "none", label: t("nameTag.edge.none") }],
+      hint: t("nameTag.letterEdgeTooLong", { max: MAX_EDGED_TEXT_LENGTH }),
+      disabled: true,
+      onChange: () => undefined,
+    }];
+  }
   const edge = normalizeTextEdge(shape.textEdge);
   return [
     {
@@ -4079,16 +4349,19 @@ function surfaceTextFontOptions(current: string): SelectPropertyOption[] {
   return options;
 }
 
+/** The wording of the three plain measures, in the language shown now. */
+const MEASURE_LABELS = () => ({ width: t("prop.width"), height: t("prop.height"), length: t("prop.length") });
+
 function getShapeProperties(shape: WorkplaneShape, onUpdate: ShapeInspectorUpdate, workspace: WorkplaneWorkspaceSettings, view: ShapePropertyView = NO_PROPERTY_VIEW): ShapePropertyConfig[] {
   const customLimit = workspace.shapeCustomizations[shape.kind]?.maxDimension;
   // A body turned by right angles names its measures by the way they run now (#230).
   const oriented = orientedMeasures(shape);
-  const own = getShapePropertiesWithAppLimits(shape, onUpdate, customLimit ?? 260, view);
-  const properties = withOrientedMeasures(own, oriented, { width: t("prop.width"), height: t("prop.height"), length: t("prop.length") });
+  const own = getShapePropertiesWithAppLimits(shape, onUpdate, view);
+  const properties = withOrientedMeasures(own, oriented, MEASURE_LABELS());
   if (customLimit === undefined) return properties;
   return properties.map((property) => {
     if (property.type === "text" || property.type === "select") return property;
-    if (["length", "width", "height", "threadLength"].includes(property.id)) return { ...property, max: customLimit };
+    if (["length", "width", "height", "diameter", "threadLength"].includes(property.id)) return { ...property, max: customLimit };
     if (["topRadius", "baseRadius"].includes(property.id)) return { ...property, max: customLimit / 2 };
     return property;
   });
@@ -4112,6 +4385,7 @@ export function ShapeInspector({
   onObjectSnapChange,
   onEditSketch,
   onOpenGroup,
+  onHullKeepHolesChange,
   canSeparateParts = false,
   onSeparateParts,
   onWrapAroundCylinder,
@@ -4121,7 +4395,11 @@ export function ShapeInspector({
   onSurfaceTextureOpenChange,
   surfaceFacePicking,
   surfacePickedFaces,
+  surfaceFacesShown,
   onSurfaceFacePick,
+  surfaceRegionDrawing,
+  surfaceDrawnRegion,
+  onSurfaceRegionDraw,
   onVaseAccessories,
   onGridfinityKeys,
   onLayerText,
@@ -4153,6 +4431,8 @@ export function ShapeInspector({
   onEditSketch?: () => void;
   /** Opens a group so its parts can be changed one by one. */
   onOpenGroup?: () => void;
+  /** A hull built again with its parts' holes kept open or filled (Discussion #1440). */
+  onHullKeepHolesChange?: (keepHoles: boolean) => void;
   canSeparateParts?: boolean;
   onSeparateParts?: () => void;
   /** Wraps this body around a cylinder of the given diameter (#106). */
@@ -4166,8 +4446,15 @@ export function ShapeInspector({
   /** Whether faces of this body are being picked for its texture with clicks in the view, and the faces picked so far. */
   surfaceFacePicking?: boolean;
   surfacePickedFaces?: SurfaceTextureFace[] | null;
-  /** Starts picking faces from these (null: stops), on the faces as the given edge angle bounds them. */
-  onSurfaceFacePick?: (faces: SurfaceTextureFace[] | null, edgeAngle: number) => void;
+  /** The picked faces are lit for a look only: clicks in the view do not change them (Discussion #1607). */
+  surfaceFacesShown?: boolean;
+  /** Starts picking faces from these (null: stops), on the faces as the given edge angle bounds them; review only lights them. */
+  onSurfaceFacePick?: (faces: SurfaceTextureFace[] | null, edgeAngle: number, review?: boolean) => void;
+  /** Whether a region is being drawn on this body for its texture (Discussion #1579), and the region drawn last. */
+  surfaceRegionDrawing?: boolean;
+  surfaceDrawnRegion?: { region: SurfaceTextureRegion } | null;
+  /** Starts drawing a region on the body in the view (false: stops). */
+  onSurfaceRegionDraw?: (drawing: boolean) => void;
   /** Lays this vase's accessories out beside it, ready to print. */
   onVaseAccessories?: () => void;
   /** Lays this Swallowtail baseplate's keys out in front of it, ready to print (#1061). */
@@ -4230,6 +4517,16 @@ export function ShapeInspector({
   const printerPlay = usePrinterPlay();
   const properties = withFitTestNotes(getShapeProperties(shape, onUpdate, workspace, { loftSection, setLoftSection, portPresetWithScrewHoles: onPortPresetWithScrewHoles }), shape.kind, printerPlay);
   const tiltedMeasures = orientedMeasures(shape).kind === "tilted";
+  // A shape with settings of its own that got a fillet or chamfer shows only its measures now; the note names it
+  // and says how its settings come back (#1689). A plain box had nothing more, so it gets no note.
+  const kindBeforeEdgeTreatments = (() => {
+    const before = shapeBeforeEdgeTreatments(shape);
+    if (!before) return null;
+    const now = new Set(properties.map((property) => property.id));
+    const own = getShapePropertiesWithAppLimits(before, () => undefined);
+    if (!own.some((property) => !now.has(property.id))) return null;
+    return t(`shape.${before.kind}` as MessageKey) || before.kind;
+  })();
   // What each value would be on a shape of this kind made new, with the saved defaults: the
   // small arrow next to a changed value takes it back there.
   const propertyDefaults = useMemo(() => shapePropertyDefaults(shape.kind, workspace, shape.kind === "gridfinity" ? normalizeGridfinityType(shape.gridfinityType) : undefined, printerPlay), [shape.kind, workspace, shape.gridfinityType, printerPlay]);
@@ -4265,6 +4562,10 @@ export function ShapeInspector({
   // A text's fill (#215): the list and the line width in view, the rest under "More" right below them.
   const textFillMore = shape.kind === "text" ? properties.filter((property) => TEXT_FILL_MORE_IDS.has(property.id)) : [];
   const textFillEnd = primaryProperties.reduce((end, property, index) => (TEXT_FILL_IN_VIEW_IDS.has(property.id) ? index + 1 : end), 0);
+  // Keep proportions goes right under the last size slider it governs, not above the whole list.
+  const showKeepProportions = Boolean(onProportionLockChange) && primaryProperties.some((property) => property.id === "height") && primaryProperties.some((property) => ["width", "length", "diameter", "outerDiameter"].includes(property.id));
+  // A counterbore's length below the head (#1670) is its height told another way, so it stays with Total length.
+  const keepProportionsAfter = primaryProperties.reduce((last, property, index) => (["height", "width", "length", "diameter", "outerDiameter", "screwHoleLengthBelowHead"].includes(property.id) ? index : last), -1) + 1;
   const threadProperties = isThread
     ? properties.filter((property) => ["pitch", "threadsPerInch", "threadStarts", "threadHand", "threadProfile", "threadTaper", "threadFlankAngle", "threadDepth", "threadCoreDiameter", "clearance", "axialClearance", "boltClearance", "chamfer", "chamferBottom", "quality"].includes(property.id))
     : [];
@@ -4272,7 +4573,7 @@ export function ShapeInspector({
     ? properties.filter((property) => ["gearProfile", "teeth", "gearModule", "gearPressureAngle", "gearBacklash", "gearRim", "toothSize", "toothWidth"].includes(property.id))
     : [];
   const gearHelixProperties = shape.kind === "gear"
-    ? properties.filter((property) => ["helixAngle", "bevelHelixAngle", "quality"].includes(property.id))
+    ? properties.filter((property) => ["helixAngle", "bevelHelixAngle", "ringRackHelixAngle", "ringRackHerringbone", "quality"].includes(property.id))
     : [];
   const taper = shapeTaperDimensions(shape);
   const taperDimensionMax = shapeDimensionLimit(workspace, shape.kind, DEFAULT_TAPER_DIMENSION_MAX);
@@ -4282,13 +4583,6 @@ export function ShapeInspector({
   const taperPartner = (changed: number, before: number, partner: number) =>
     taperKeepsProportions ? Math.min(taperDimensionMax, Math.max(MIN_SHAPE_SIZE, partner * (changed / Math.max(MIN_SHAPE_SIZE, before)))) : partner;
   const taperProperties: ShapePropertyConfig[] = shapeIgnoresTaper ? [] : [
-    {
-      type: "toggle",
-      id: "taperKeepProportions",
-      label: t("inspector.keepProportions"),
-      value: taperKeepsProportions,
-      onChange: (keep) => onUpdate({ taperKeepProportions: keep || undefined }),
-    },
     {
       id: "topLength",
       label: t("prop.topLength"),
@@ -4320,6 +4614,13 @@ export function ShapeInspector({
       min: MIN_SHAPE_SIZE,
       max: taperDimensionMax,
       onChange: (taperBottomWidth) => onUpdate({ taperBottomWidth, taperBottomDepth: taperPartner(taperBottomWidth, taper.bottomWidth, taper.bottomDepth), taperBottomScale: undefined }),
+    },
+    {
+      type: "toggle",
+      id: "taperKeepProportions",
+      label: t("inspector.keepProportions"),
+      value: taperKeepsProportions,
+      onChange: (keep) => onUpdate({ taperKeepProportions: keep || undefined }),
     },
   ];
   /*
@@ -4366,8 +4667,11 @@ export function ShapeInspector({
   const slopeSide = normalizeSlopeSide(shape.kind, shape.slopeSide);
   const slopeLength = slopeAlongWidth(slopeSide) ? shapeWidth(shape) : shapeDepth(shape);
   const slopeEndValue = slopeEndHeight(shape);
-  const slopeAngle = (Math.atan2(shape.height - slopeEndValue, Math.max(1e-6, slopeLength)) * 180) / Math.PI;
-  const slopeMaxAngle = (Math.atan2(shape.height - Math.min(SLOPE_MIN_END, shape.height), Math.max(1e-6, slopeLength)) * 180) / Math.PI;
+  const slopeFrom = normalizeSlopeFrom(shape.slopeFrom);
+  // From the middle the angle is the line's from the middle to an end: over half the length.
+  const slopeRun = slopeFrom === "middle" ? slopeLength / 2 : slopeLength;
+  const slopeAngle = (Math.atan2(shape.height - slopeEndValue, Math.max(1e-6, slopeRun)) * 180) / Math.PI;
+  const slopeMaxAngle = (Math.atan2(shape.height - Math.min(SLOPE_MIN_END, shape.height), Math.max(1e-6, slopeRun)) * 180) / Math.PI;
   const slopeProperties: ShapePropertyConfig[] = !slopeShown ? [] : [
     {
       type: "select",
@@ -4395,7 +4699,7 @@ export function ShapeInspector({
       max: Math.floor(slopeMaxAngle * 100) / 100,
       step: 0.5,
       onChange: (angle) => {
-        const drop = Math.tan((Math.min(89.9, Math.max(0, angle)) * Math.PI) / 180) * slopeLength;
+        const drop = Math.tan((Math.min(89.9, Math.max(0, angle)) * Math.PI) / 180) * slopeRun;
         onUpdate({ slopeEnd: Math.max(Math.min(SLOPE_MIN_END, shape.height), shape.height - drop), slopeSide: shape.slopeSide ?? slopeSide });
       },
     },
@@ -4409,8 +4713,37 @@ export function ShapeInspector({
       hint: t("slope.curveHint"),
       onChange: (percent) => onUpdate({ slopeCurve: normalizeSlopeCurve(percent / 100), slopeEnd: shape.slopeEnd ?? shape.height, slopeSide: shape.slopeSide ?? slopeSide }),
     },
+    {
+      type: "select",
+      id: "slopeFrom",
+      label: t("prop.slopeFrom"),
+      value: slopeFrom,
+      hint: slopeFrom === "arch" ? t("slope.fromArchHint") : t("slope.fromHint"),
+      options: [{ value: "end", label: t("slope.from.end") }, { value: "middle", label: t("slope.from.middle") }, { value: "arch", label: t("slope.from.arch") }],
+      onChange: (value) => onUpdate({ slopeFrom: normalizeSlopeFrom(value), slopeEnd: shape.slopeEnd ?? shape.height, slopeSide: shape.slopeSide ?? slopeSide }),
+    },
+    {
+      id: "sideDrop",
+      label: t("prop.sideDrop"),
+      value: Math.min(maxSideDrop(shape.height), Math.max(0, shape.sideDrop ?? 0)),
+      min: 0,
+      max: Math.floor(maxSideDrop(shape.height) * 100) / 100,
+      step: 0.1,
+      hint: t("slope.sideDropHint"),
+      onChange: (sideDrop) => onUpdate({ sideDrop: Math.min(maxSideDrop(shape.height), Math.max(0, sideDrop)) }),
+    },
+    {
+      id: "sideCurve",
+      label: t("prop.sideCurve"),
+      value: Math.round(normalizeSlopeCurve(shape.sideCurve) * 100),
+      min: -100,
+      max: 100,
+      step: 1,
+      hint: t("slope.sideCurveHint"),
+      onChange: (percent) => onUpdate({ sideCurve: normalizeSlopeCurve(percent / 100) }),
+    },
   ];
-  const slopeDefaults: PropertyDefaultValues = new Map<string, number | string | boolean>([["slopeEnd", shape.height], ["slopeAngle", 0], ["slopeCurve", 0]]);
+  const slopeDefaults: PropertyDefaultValues = new Map<string, number | string | boolean>([["slopeEnd", shape.height], ["slopeAngle", 0], ["slopeCurve", 0], ["sideDrop", 0], ["sideCurve", 0], ["slopeFrom", "end"]]);
   /*
    * Narrow along (slopeAlong.ts): seen from above, both long sides run in towards one
    * end - its width, where along the length it starts and how much the sides curve.
@@ -4667,6 +5000,7 @@ export function ShapeInspector({
           key={`name-tag-${shape.id}`}
           shapeId={shape.id}
           stack={nameTagStack}
+          layerSteps={tagHasLayerSteps(shape)}
           workspace={workspace}
           disabled={frozen}
           onLayerText={onLayerText}
@@ -4680,7 +5014,7 @@ export function ShapeInspector({
       {sbcBoard ? <SbcBoardCard key={`sbc-board-${shape.id}`} shapeId={shape.id} controls={sbcBoard} workspace={workspace} disabled={frozen} onInteractionActiveChange={onInteractionActiveChange} /> : null}
       {referenceImage ? <ReferenceImageCard key={`reference-image-${shape.id}`} shapeId={shape.id} controls={referenceImage} workspace={workspace} locked={frozen} onInteractionActiveChange={onInteractionActiveChange} /> : null}
       {iconTag?.isTag ? (
-        <IconTagCard key={`icon-tag-${shape.id}`} shapeId={shape.id} controls={iconTag} workspace={workspace} disabled={frozen} onInteractionActiveChange={onInteractionActiveChange} />
+        <IconTagCard key={`icon-tag-${shape.id}`} shapeId={shape.id} controls={iconTag} layerSteps={tagHasLayerSteps(shape)} workspace={workspace} disabled={frozen} onInteractionActiveChange={onInteractionActiveChange} />
       ) : iconTag ? (
         <MakeIconLayersButton disabled={frozen} onLayer={iconTag.onLayer} />
       ) : null}
@@ -4735,7 +5069,15 @@ export function ShapeInspector({
         <div className="color-card" aria-label={t("inspector.shapeColor")} data-help-section-all="colorCard">
           <div className="color-card-header">
             <span>{t("inspector.color")}</span>
-            <span className="color-value">{solidColor.toUpperCase()}</span>
+            <HexColorField
+              color={solidColor}
+              disabled={frozen}
+              onCommit={(color) => {
+                onUpdate({ color, hole: false, ...singleColorPatch });
+                rememberColor(color);
+              }}
+              onInteractionActiveChange={onInteractionActiveChange}
+            />
           </div>
           <div className="color-grid">
             {SOLID_COLORS.map((color) => (
@@ -4805,6 +5147,24 @@ export function ShapeInspector({
         </button>
       ) : null}
 
+      {/* A hull keeps its parts' holes open or fills them (Discussion #1440); switching builds it again. */}
+      {shape.groupOperation === "hull" && !shape.hole && onHullKeepHolesChange ? (
+        <div className="property-card" data-help-section-all="intersection">
+          <div className="property-list cylinder-wrap-body">
+            <ToggleProperty
+              label={t("inspector.hullKeepHoles")}
+              value={Boolean(shape.hullKeepHoles)}
+              disabled={frozen}
+              onChange={onHullKeepHolesChange}
+            />
+            <p className="cylinder-wrap-hint">
+              {t(shape.hullKeepHoles ? "inspector.hullKeepHolesOnHint" : "inspector.hullKeepHolesOffHint")}
+              <GuideHelpLink section="intersection" className="inspector-help-link" />
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {/* What the group does with its parts when it is resized (Discussion #526): two long choices, side by side. */}
       {offersGroupResize(shape) ? (
         <div className="property-card" data-help-section-all="groupResize">
@@ -4870,7 +5230,11 @@ export function ShapeInspector({
           onInteractionActiveChange={onInteractionActiveChange}
           facePicking={surfaceFacePicking}
           pickedFaces={surfacePickedFaces}
+          facesShown={surfaceFacesShown}
           onFacePick={onSurfaceFacePick}
+          regionDrawing={surfaceRegionDrawing}
+          drawnRegion={surfaceDrawnRegion}
+          onRegionDraw={onSurfaceRegionDraw}
         />
       ) : null}
 
@@ -4928,7 +5292,7 @@ export function ShapeInspector({
           aria-controls={`properties-${shape.id}`}
           onClick={() => setPropertiesOpen((open) => !open)}
         >
-          <span>{t("inspector.properties")}</span>
+          <span className="property-card-title"><SlidersHorizontal size={20} strokeWidth={2.4} aria-hidden="true" />{t("inspector.properties")}</span>
           <ChevronUp className={propertiesOpen ? "" : "collapsed"} size={25} strokeWidth={2.8} />
         </button>
         {propertiesOpen ? (
@@ -5024,14 +5388,6 @@ export function ShapeInspector({
                 onChange={threadDriveProperty.onChange}
               />
             ) : null}
-            {onProportionLockChange && primaryProperties.some((property) => property.id === "height") && primaryProperties.some((property) => ["width", "length", "diameter", "outerDiameter"].includes(property.id)) ? (
-              <ToggleProperty
-                label={t("inspector.keepProportions")}
-                value={proportionLock}
-                disabled={frozen}
-                onChange={onProportionLockChange}
-              />
-            ) : null}
             {textFillMore.length ? (
               <>
                 <ShapePropertyRows formulas={shape.formulas} onFormula={noteFormula} properties={primaryProperties.slice(0, textFillEnd)} defaults={propertyDefaults?.main} workspace={workspace} disabled={frozen} onInteractionActiveChange={onInteractionActiveChange} />
@@ -5046,10 +5402,46 @@ export function ShapeInspector({
                 <ShapePropertyRows formulas={shape.formulas} onFormula={noteFormula} properties={primaryProperties.slice(textFillEnd)} defaults={propertyDefaults?.main} workspace={workspace} disabled={frozen} onInteractionActiveChange={onInteractionActiveChange} />
               </>
             ) : (
-              <ShapePropertyRows formulas={shape.formulas} onFormula={noteFormula} properties={primaryProperties} defaults={propertyDefaults?.main} workspace={workspace} disabled={frozen} onInteractionActiveChange={onInteractionActiveChange} />
+              <>
+                <ShapePropertyRows formulas={shape.formulas} onFormula={noteFormula} properties={showKeepProportions ? primaryProperties.slice(0, keepProportionsAfter) : primaryProperties} defaults={propertyDefaults?.main} workspace={workspace} disabled={frozen} onInteractionActiveChange={onInteractionActiveChange} />
+                {showKeepProportions ? (
+                  <>
+                    <ToggleProperty label={t("inspector.keepProportions")} value={proportionLock} disabled={frozen} onChange={onProportionLockChange!} />
+                    {keepProportionsAfter < primaryProperties.length ? (
+                      <ShapePropertyRows formulas={shape.formulas} onFormula={noteFormula} properties={primaryProperties.slice(keepProportionsAfter)} defaults={propertyDefaults?.main} workspace={workspace} disabled={frozen} onInteractionActiveChange={onInteractionActiveChange} />
+                    ) : null}
+                  </>
+                ) : null}
+              </>
             )}
-            {tiltedMeasures && primaryProperties.some((property) => ["width", "length", "height"].includes(property.id)) ? (
-              <p className="cylinder-wrap-hint">{t("prop.tiltedMeasures")}</p>
+            {textFillMore.length && showKeepProportions ? (
+              <ToggleProperty label={t("inspector.keepProportions")} value={proportionLock} disabled={frozen} onChange={onProportionLockChange!} />
+            ) : null}
+            {/* Only the plain Length, Width and Height need the note; a Head diameter means the same at any angle (#1634). */}
+            {tiltedMeasures && primaryProperties.some((property) => isPlainMeasure(property, MEASURE_LABELS())) ? (
+              <>
+                <p className="cylinder-wrap-hint">{t("prop.tiltedMeasures")}</p>
+                {(() => {
+                  // What the tilted body measures in space, read only: its own measures cannot say how high it stands (#1730).
+                  const box = alignBounds(shape);
+                  const size = (value: number) => formatPropertyNumber(millimetersToDisplay(value, workspace), workspace.accuracy, 0.1);
+                  return (
+                    <p className="cylinder-wrap-hint">
+                      {t("prop.tiltedOverall", { length: size(box.maxZ - box.minZ), width: size(box.maxX - box.minX), height: size(box.maxY - box.minY), unit: currentLengthUnitLabel() })}
+                    </p>
+                  );
+                })()}
+              </>
+            ) : null}
+            {kindBeforeEdgeTreatments ? (
+              <p className="cylinder-wrap-hint">{t("prop.settingsBeforeEdgeFeature", {
+                shape: kindBeforeEdgeTreatments,
+                fillet: t("editor.tool.fillet"),
+                chamfer: t("editor.tool.chamfer"),
+                hollow: t("editor.tool.hollow"),
+                list: t("edge.featureHistory"),
+                undo: t("edge.revertAction"),
+              })}</p>
             ) : null}
             {shape.kind === "gridfinity" && gridfinityPlan({ ...shape, depth: shapeDepth(shape) }).swallowtail ? (
               <>
@@ -5086,7 +5478,7 @@ export function ShapeInspector({
           aria-controls={`position-${shape.id}`}
           onClick={() => setPositionOpen((open) => !open)}
         >
-          <span>{t("inspector.position")}</span>
+          <span className="property-card-title"><Move3d size={20} strokeWidth={2.4} aria-hidden="true" />{t("inspector.position")}</span>
           <ChevronUp className={positionOpen ? "" : "collapsed"} size={25} strokeWidth={2.8} />
         </button>
         {positionOpen ? (
@@ -5123,7 +5515,7 @@ export function ShapeInspector({
           aria-controls={`rotation-${shape.id}`}
           onClick={() => setRotationOpen((open) => !open)}
         >
-          <span>{t("inspector.rotation")}</span>
+          <span className="property-card-title"><Rotate3d size={20} strokeWidth={2.4} aria-hidden="true" />{t("inspector.rotation")}</span>
           <ChevronUp className={rotationOpen ? "" : "collapsed"} size={25} strokeWidth={2.8} />
         </button>
         {rotationOpen ? (
@@ -5151,7 +5543,7 @@ export function ShapeInspector({
             aria-controls={`taper-${shape.id}`}
             onClick={() => setTaperOpen((open) => !open)}
           >
-            <span>{t("inspector.taper")}</span>
+            <span className="property-card-title"><Cone size={20} strokeWidth={2.4} aria-hidden="true" />{t("inspector.taper")}</span>
             <ChevronUp className={taperOpen ? "" : "collapsed"} size={25} strokeWidth={2.8} />
           </button>
           {taperOpen ? (
@@ -5170,7 +5562,7 @@ export function ShapeInspector({
             aria-controls={`twist-${shape.id}`}
             onClick={() => setTwistOpen((open) => !open)}
           >
-            <span>{t("inspector.twist")}</span>
+            <span className="property-card-title"><Spline size={20} strokeWidth={2.4} aria-hidden="true" />{t("inspector.twist")}</span>
             <ChevronUp className={twistOpen ? "" : "collapsed"} size={25} strokeWidth={2.8} />
           </button>
           {twistOpen ? (
@@ -5189,7 +5581,7 @@ export function ShapeInspector({
             aria-controls={`slope-${shape.id}`}
             onClick={() => setSlopeOpen((open) => !open)}
           >
-            <span>{t("inspector.slope")}</span>
+            <span className="property-card-title"><TrendingDown size={20} strokeWidth={2.4} aria-hidden="true" />{t("inspector.slope")}</span>
             <ChevronUp className={slopeOpen ? "" : "collapsed"} size={25} strokeWidth={2.8} />
           </button>
           {slopeOpen ? (
@@ -5208,7 +5600,7 @@ export function ShapeInspector({
             aria-controls={`narrow-${shape.id}`}
             onClick={() => setNarrowOpen((open) => !open)}
           >
-            <span>{t("inspector.narrow")}</span>
+            <span className="property-card-title"><Shrink size={20} strokeWidth={2.4} aria-hidden="true" />{t("inspector.narrow")}</span>
             <ChevronUp className={narrowOpen ? "" : "collapsed"} size={25} strokeWidth={2.8} />
           </button>
           {narrowOpen ? (
@@ -5659,6 +6051,7 @@ function LayerRows({ layers, firstLabel, workspace, disabled, onChange, onIntera
 function NameTagCard({
   shapeId,
   stack,
+  layerSteps,
   workspace,
   disabled,
   onLayerText,
@@ -5667,6 +6060,8 @@ function NameTagCard({
 }: {
   shapeId: string;
   stack: NameTagStack;
+  /** A layer has a step of its own (texture, edges, paint), which building the layers anew takes off (Discussion #1692). */
+  layerSteps: boolean;
   workspace: WorkplaneWorkspaceSettings;
   disabled: boolean;
   onLayerText: (patch: TextLayerPatch) => void;
@@ -5675,10 +6070,12 @@ function NameTagCard({
 }) {
   const [open, setOpen] = useState(true);
   const { source, layers, keyring } = stack;
+  // A long text takes no letter edge (MAX_EDGED_TEXT_LENGTH): the buttons are greyed out and a line says why.
+  const edgeAllowed = textAllowsEdge(source);
   const writeLayers = (next: TextLayer[]) => onLayerText({ layers: next });
   const changeLayer = (index: number, changes: Partial<TextLayer>) => writeLayers(layers.map((entry, position) => (position === index ? { ...entry, ...changes } : entry)));
   const properties: ShapePropertyConfig[] = [
-    { type: "text", id: "nameTagText", label: t("prop.text"), value: source.text ?? "TEXT", onChange: (text) => onLayerText({ text: text.slice(0, 24) || " " }) },
+    { type: "text", id: "nameTagText", label: t("prop.text"), value: source.text ?? "TEXT", maxLength: MAX_TEXT_LENGTH, onChange: (text) => onLayerText({ text: limitedText(text) }) },
     textFontProperty(source, (patch) => { if (typeof patch.font === "string") onLayerText({ font: patch.font }); }),
     { id: "letterSize", label: t("nameTag.letterSize"), value: textLetterSize(source), min: MIN_LETTER_SIZE, max: 60, step: 0.5, hint: t("nameTag.letterSizeHint"), onChange: (letterSize) => onLayerText({ letterSize }) },
     ...(source.textCurved ? [] : [{ type: "toggle", id: "nameTagVertical", label: t("prop.textVertical"), value: Boolean(source.textVertical), onChange: (vertical: boolean) => onLayerText({ vertical }) } satisfies ShapePropertyConfig]),
@@ -5696,6 +6093,7 @@ function NameTagCard({
           <GuideHelpLink chapter="text" section="textLayers" className="inspector-help-link" />
         </p>
       ) : null}
+      {open && layerSteps ? <p className="name-tag-hint name-tag-steps-note" role="note">{t("nameTag.layerStepsNote")}</p> : null}
       {open ? (
         <div className="property-list text-layers-body name-tag-body" id={`name-tag-${shapeId}`}>
           <ShapePropertyRows properties={properties} workspace={workspace} disabled={disabled} onInteractionActiveChange={onInteractionActiveChange} />
@@ -5704,7 +6102,7 @@ function NameTagCard({
           <div className="name-tag-sides name-tag-edge" role="radiogroup" aria-label={t("nameTag.letterEdge")}>
             <span>{t("nameTag.letterEdge")}</span>
             {(["none", "round", "chamfer"] as const).map((kind) => {
-              const active = (layers[0]?.edge?.kind ?? "none") === kind;
+              const active = (edgeAllowed ? layers[0]?.edge?.kind ?? "none" : "none") === kind;
               return (
                 <button
                   key={kind}
@@ -5712,7 +6110,7 @@ function NameTagCard({
                   role="radio"
                   aria-checked={active}
                   className={active ? "active" : ""}
-                  disabled={disabled || !layers.length}
+                  disabled={disabled || !layers.length || !edgeAllowed}
                   onClick={() => changeLayer(0, { edge: kind === "none" ? undefined : { kind, size: layers[0]?.edge?.size ?? Math.min(0.4, layers[0].height) } })}
                 >
                   {t(`nameTag.edge.${kind}`)}
@@ -5720,7 +6118,8 @@ function NameTagCard({
               );
             })}
           </div>
-          {layers[0]?.edge ? (
+          {edgeAllowed ? null : <p className="property-hint">{t("nameTag.letterEdgeTooLong", { max: MAX_EDGED_TEXT_LENGTH })}</p>}
+          {edgeAllowed && layers[0]?.edge ? (
             <RangeProperty
               id="letterEdgeSize"
               label={t("nameTag.letterEdgeSize")}
@@ -6175,9 +6574,11 @@ function KeyringAlongProperty({ keyring, limit, workspace, disabled, onChange, o
   );
 }
 
-function IconTagCard({ shapeId, controls, workspace, disabled, onInteractionActiveChange }: {
+function IconTagCard({ shapeId, controls, layerSteps, workspace, disabled, onInteractionActiveChange }: {
   shapeId: string;
   controls: IconTagControls;
+  /** A layer has a step of its own (texture, edges, paint), which building the layers anew takes off (Discussion #1692). */
+  layerSteps: boolean;
   workspace: WorkplaneWorkspaceSettings;
   disabled: boolean;
   onInteractionActiveChange?: (active: boolean) => void;
@@ -6217,6 +6618,7 @@ function IconTagCard({ shapeId, controls, workspace, disabled, onInteractionActi
           <GuideHelpLink chapter="text" section="iconTag" className="inspector-help-link" />
         </p>
       ) : null}
+      {open && layerSteps ? <p className="name-tag-hint name-tag-steps-note" role="note">{t("nameTag.layerStepsNote")}</p> : null}
       {open ? (
         <div className="property-list text-layers-body name-tag-body" id={`icon-tag-${shapeId}`}>
           <input
@@ -6396,24 +6798,39 @@ function surfaceSettingsForPattern(current: SurfaceTextureSettings, pattern: Sur
   return { ...reset, ...starter, ...tile, ...own, pattern };
 }
 
-/** A picture file as one's own image for the texture: drawn small (SURFACE_TEXTURE_OWN_IMAGE_SIZE) and turned grey. */
+/**
+ * A picture file as one's own image for the texture: drawn small (SURFACE_TEXTURE_OWN_IMAGE_SIZE) and turned grey. A
+ * drawing (SVG) in two tones also keeps its outlines, found on a fine drawing of it, so an image pressed on once is cut
+ * along them as a text is, not along the points of the small image (#1268).
+ */
 async function surfaceImageFromFile(file: File) {
   const url = URL.createObjectURL(file);
   try {
     const picture = new Image();
     picture.src = url;
     await picture.decode();
+    const drawing = file.type === "image/svg+xml" || /\.svg$/i.test(file.name);
     // A drawing without a size of its own (an SVG) is drawn as large as one's image may be.
     const width = picture.naturalWidth || SURFACE_TEXTURE_OWN_IMAGE_SIZE, height = picture.naturalHeight || SURFACE_TEXTURE_OWN_IMAGE_SIZE;
-    const scale = Math.min(1, SURFACE_TEXTURE_OWN_IMAGE_SIZE / Math.max(width, height));
-    const w = Math.max(2, Math.round(width * scale)), h = Math.max(2, Math.round(height * scale));
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error("no canvas");
-    context.drawImage(picture, 0, 0, w, h);
-    return surfaceTextureOwnImage(context.getImageData(0, 0, w, h).data, w, h);
+    const draw = (limit: number) => {
+      const scale = drawing ? limit / Math.max(width, height) : Math.min(1, limit / Math.max(width, height));
+      const w = Math.max(2, Math.round(width * scale)), h = Math.max(2, Math.round(height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) throw new Error("no canvas");
+      context.drawImage(picture, 0, 0, w, h);
+      return { w, h, data: context.getImageData(0, 0, w, h).data };
+    };
+    const small = draw(SURFACE_TEXTURE_OWN_IMAGE_SIZE);
+    const own = surfaceTextureOwnImage(small.data, small.w, small.h);
+    if (!drawing) return own;
+    const fine = draw(SURFACE_IMAGE_OUTLINE_RASTER);
+    const grey = drawingGrey(fine.data, fine.w, fine.h);
+    if (!inTwoTones(grey)) return own;
+    const outline = drawingOutlines(grey, fine.w, fine.h);
+    return outline.length ? { ...own, outline } : own;
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -6435,7 +6852,11 @@ export function SurfaceTextureCard({
   onInteractionActiveChange,
   facePicking = false,
   pickedFaces = null,
+  facesShown = false,
   onFacePick,
+  regionDrawing = false,
+  drawnRegion = null,
+  onRegionDraw,
 }: {
   shape: WorkplaneShape;
   workspace: WorkplaneWorkspaceSettings;
@@ -6451,7 +6872,16 @@ export function SurfaceTextureCard({
   /** Faces picked with clicks in the view (the editor holds the clicks): while picking, they are the card's faces. */
   facePicking?: boolean;
   pickedFaces?: SurfaceTextureFace[] | null;
-  onFacePick?: (faces: SurfaceTextureFace[] | null, edgeAngle: number) => void;
+  /** The faces of the shown layer are lit for a look, without picking (Discussion #1607). */
+  facesShown?: boolean;
+  onFacePick?: (faces: SurfaceTextureFace[] | null, edgeAngle: number, review?: boolean) => void;
+  /**
+   * A region drawn on the face in the view (Discussion #1579; the editor holds the drawing): it comes back once per lasso,
+   * for the layer shown when drawing began.
+   */
+  regionDrawing?: boolean;
+  drawnRegion?: { region: SurfaceTextureRegion } | null;
+  onRegionDraw?: (drawing: boolean) => void;
 }) {
   const [ownOpen, setOwnOpen] = useState(false);
   const open = openProp ?? ownOpen;
@@ -6497,11 +6927,17 @@ export function SurfaceTextureCard({
   useEffect(() => {
     if (pickedFaces) setLayers((all) => all.map((layer, index) => (index === pickedLayer.current ? normalizeSurfaceTexture({ ...layer, faces: pickedFaces }) : layer)));
   }, [pickedFaces]);
-  /** Shows another layer: picking faces goes on with that layer's faces. */
+  // A region drawn in the view is the place of the layer it was drawn for, instead of faces picked.
+  useEffect(() => {
+    if (drawnRegion) setLayers((all) => all.map((layer, index) => (index === pickedLayer.current ? normalizeSurfaceTexture({ ...layer, region: drawnRegion.region, faces: [] }) : layer)));
+  }, [drawnRegion]);
+  /** Shows another layer: picking faces goes on with that layer's faces; drawing a region stops. */
   const showLayer = (index: number) => {
     pickedLayer.current = index;
     setLayerIndex(index);
     if (facePicking) onFacePick?.(layers[index].faces, layers[index].edgeAngle);
+    else if (facesShown) onFacePick?.(layers[index].faces.length > 0 ? layers[index].faces : null, layers[index].edgeAngle, true);
+    if (regionDrawing) onRegionDraw?.(false);
   };
   const addLayer = () => {
     // A new layer starts on no faces and asks for them at once: it goes only where it is picked.
@@ -6518,7 +6954,14 @@ export function SurfaceTextureCard({
     const shown = Math.max(0, index - 1);
     pickedLayer.current = shown;
     setLayerIndex(shown);
-    if (facePicking) onFacePick?.(null, settings.edgeAngle);
+    if (facePicking || facesShown) onFacePick?.(null, settings.edgeAngle);
+    if (regionDrawing) onRegionDraw?.(false);
+  };
+  /** Draws a region for the layer shown (or stops): picking faces stops, the region takes their place. */
+  const drawRegion = (drawing: boolean) => {
+    pickedLayer.current = shownLayer;
+    if (drawing && (facePicking || facesShown)) onFacePick?.(null, settings.edgeAngle);
+    onRegionDraw?.(drawing);
   };
   // A further layer needs faces of its own; the first, picking none, takes the faces the others leave.
   const layerWithoutFaces = layers.findIndex((layer, index) => index > 0 && !surfaceTextureLayerPlaced(layer));
@@ -6590,8 +7033,9 @@ export function SurfaceTextureCard({
   const patternColor = layers[0].patternColor || surfacePatternPartOf(shape)?.color || surfacePatternColor(layers[0], shape.color);
   const percent = (id: string, label: string, value: number, onChange: (value: number) => void) => range(id, label, Math.round(value * 100), [0, 100], 1, (share) => onChange(share / 100));
   const apply = async () => {
-    // The faces picked so far are in the settings already; picking ends with the texture made.
-    if (facePicking) onFacePick?.(null, settings.edgeAngle);
+    // The faces picked so far are in the settings already; picking ends with the texture made, and so does drawing.
+    if (facePicking || facesShown) onFacePick?.(null, settings.edgeAngle);
+    if (regionDrawing) onRegionDraw?.(false);
     setBusy(true);
     try {
       await onApply(layers[0], layers.slice(1));
@@ -6940,6 +7384,17 @@ export function SurfaceTextureCard({
                   onChange={(value) => set({ projection: value as SurfaceTextureSettings["projection"] })}
                 />
               )}
+              {/* A board's pith runs along its longest side: only a log asks for its axis. */}
+              {!grain && !(wood && settings.woodCut !== "log") && (cracks || placedHere || wood || settings.projection !== "allRound") ? (
+                <SelectProperty
+                  type="select"
+                  label={t("inspector.surfaceAxis")}
+                  value={settings.axis}
+                  options={options(SURFACE_TEXTURE_AXES, (value) => value.toUpperCase())}
+                  disabled={disabled || busy}
+                  onChange={(value) => set({ axis: value as SurfaceTextureSettings["axis"] })}
+                />
+              ) : null}
               {/* The pattern as a part of its own, in a colour of its own: a bundle of the body and the pattern. */}
               <ToggleProperty
                 label={t("inspector.surfacePatternPart")}
@@ -6962,19 +7417,10 @@ export function SurfaceTextureCard({
                   </p>
                 </>
               ) : null}
-              {/* A board's pith runs along its longest side: only a log asks for its axis. */}
-              {!grain && !(wood && settings.woodCut !== "log") && (cracks || placedHere || wood || settings.projection !== "allRound") ? (
-                <SelectProperty
-                  type="select"
-                  label={t("inspector.surfaceAxis")}
-                  value={settings.axis}
-                  options={options(SURFACE_TEXTURE_AXES, (value) => value.toUpperCase())}
-                  disabled={disabled || busy}
-                  onChange={(value) => set({ axis: value as SurfaceTextureSettings["axis"] })}
-                />
-              ) : null}
-              {/* Where it goes: every face, or only the faces clicked in the view (a text goes where it is put). */}
-              {placedHere || !onFacePick ? null : (
+              {/* Where it goes: every face, or only the faces clicked in the view (a text goes where it is put). An image
+                  once goes onto the picked faces too, its middle on them where Around and Height aim past them (#1206, #1462).
+                  A region drawn on a face takes the place of the faces (Discussion #1579). */}
+              {text || !onFacePick || settings.region ? null : (
                 <>
                   <p className={`cylinder-wrap-hint ${needsFaces ? "surface-layer-missing" : ""}`}>
                     {picked
@@ -6995,6 +7441,19 @@ export function SurfaceTextureCard({
                     <MousePointerClick size={17} strokeWidth={2.5} />
                     <span>{t(facePicking ? "inspector.surfaceFacesDone" : "inspector.surfaceFacesPick")}</span>
                   </button>
+                  {picked && !facePicking ? (
+                    <button
+                      className={`inspector-action-button ${facesShown ? "active" : ""}`}
+                      type="button"
+                      aria-pressed={facesShown}
+                      disabled={disabled || busy}
+                      onClick={() => onFacePick(facesShown ? null : settings.faces, settings.edgeAngle, true)}
+                    >
+                      {facesShown ? <EyeOff size={17} strokeWidth={2.5} /> : <Eye size={17} strokeWidth={2.5} />}
+                      <span>{t(facesShown ? "inspector.surfaceFacesShowDone" : "inspector.surfaceFacesShow")}</span>
+                    </button>
+                  ) : null}
+                  {facesShown ? <p className="cylinder-wrap-hint">{t("inspector.surfaceFacesShowHint")}</p> : null}
                   {picked && shownLayer === 0 ? (
                     <button
                       className="inspector-action-button"
@@ -7003,6 +7462,7 @@ export function SurfaceTextureCard({
                       onClick={() => {
                         set({ faces: [] });
                         if (facePicking) onFacePick([], settings.edgeAngle);
+                        else if (facesShown) onFacePick(null, settings.edgeAngle);
                       }}
                     >
                       <RotateCcw size={17} strokeWidth={2.5} />
@@ -7010,6 +7470,40 @@ export function SurfaceTextureCard({
                     </button>
                   ) : null}
                   {facePicking ? <p className="cylinder-wrap-hint">{t("inspector.surfaceFacesPickHint")}</p> : null}
+                </>
+              )}
+              {/* Or a region drawn on a face (Discussion #1579): the pattern only inside it, the rest of the face smooth or
+                  another layer's. Several layers can each have one on the same face. */}
+              {text || !onRegionDraw ? null : (
+                <>
+                  <p className="cylinder-wrap-hint">
+                    {settings.region ? t("inspector.surfaceRegionSome", { count: settings.region.points.length }) : t("inspector.surfaceRegionNone")}
+                  </p>
+                  <button
+                    className={`inspector-action-button ${regionDrawing ? "active" : ""}`}
+                    type="button"
+                    aria-pressed={regionDrawing}
+                    disabled={disabled || busy}
+                    onClick={() => drawRegion(!regionDrawing)}
+                  >
+                    <Lasso size={17} strokeWidth={2.5} />
+                    <span>{t(regionDrawing ? "inspector.surfaceRegionStop" : settings.region ? "inspector.surfaceRegionAgain" : "inspector.surfaceRegionDraw")}</span>
+                  </button>
+                  {settings.region ? (
+                    <button
+                      className="inspector-action-button"
+                      type="button"
+                      disabled={disabled || busy}
+                      onClick={() => {
+                        set({ region: null });
+                        if (regionDrawing) onRegionDraw(false);
+                      }}
+                    >
+                      <RotateCcw size={17} strokeWidth={2.5} />
+                      <span>{t("inspector.surfaceRegionClear")}</span>
+                    </button>
+                  ) : null}
+                  {regionDrawing ? <p className="cylinder-wrap-hint">{t("inspector.surfaceRegionDrawHint")}</p> : null}
                 </>
               )}
               {shownLayer > 0 ? (
@@ -7568,7 +8062,7 @@ function ShapePropertyRows({
     const fallback = disabled || NO_RESET_PROPERTY_IDS.has(property.id) ? undefined : defaults?.get(property.id);
     if (property.type === "select") {
       const onReset = typeof fallback === "string" && fallback !== property.value ? () => property.onChange(fallback) : undefined;
-      return <SelectProperty {...property} key={property.id} disabled={disabled} onReset={onReset} />;
+      return <SelectProperty {...property} key={property.id} disabled={disabled || property.disabled} onReset={property.disabled ? undefined : onReset} />;
     }
     if (property.type === "toggle") {
       // A switch greyed out on its own offers no reset either.
@@ -7760,6 +8254,71 @@ function CustomColorInput({ color, disabled, onCommit, onInteractionActiveChange
   );
 }
 
+/**
+ * The colour code at the top of the colour card, to type or paste (Discussion #1674): the colour window of
+ * Windows, which Firefox and the desktop app open for Custom, knows only red, green and blue. "#5EBDDB",
+ * "5ebddb" and "#5bd" are taken as they are; a value that is no colour goes back to the colour there is.
+ * Enter or leaving the field sets the colour, Esc keeps the old one.
+ */
+function HexColorField({ color, placeholder, disabled, onCommit, onInteractionActiveChange }: {
+  color?: string;
+  placeholder?: string;
+  disabled?: boolean;
+  onCommit: (color: string) => void;
+  onInteractionActiveChange?: (active: boolean) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  // The typed text, read at once: Esc blurs the field before React has the cleared draft.
+  const draftRef = useRef<string | null>(null);
+  const holdInteraction = useInteractionHold(onInteractionActiveChange);
+  const label = t("aria.colorHex", { name: t("inspector.color") });
+  const setTyped = (value: string | null) => {
+    draftRef.current = value;
+    setDraft(value);
+  };
+  const commit = () => {
+    const typed = draftRef.current;
+    if (typed === null) return;
+    setTyped(null);
+    const next = normalizeHexColor(typed);
+    if (next && next !== color?.toLowerCase()) onCommit(next);
+  };
+  return (
+    <input
+      className="color-value color-hex-input"
+      type="text"
+      value={draft ?? color?.toUpperCase() ?? ""}
+      placeholder={placeholder}
+      disabled={disabled}
+      maxLength={9}
+      spellCheck={false}
+      autoComplete="off"
+      title={label}
+      aria-label={label}
+      onChange={(event) => setTyped(event.target.value)}
+      onFocus={(event) => {
+        holdInteraction(true);
+        event.currentTarget.select();
+      }}
+      onBlur={() => {
+        holdInteraction(false);
+        commit();
+      }}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.key === "Enter") {
+          event.preventDefault();
+          commit();
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          setTyped(null);
+          event.currentTarget.blur();
+        }
+      }}
+    />
+  );
+}
+
 /** How far the name of a value is dragged before it changes the value, and how many pixels make one step of the wheel. */
 const SCRUB_START_PX = 3;
 const SCRUB_PX_PER_STEP = 4;
@@ -7794,7 +8353,8 @@ function RangeProperty({
     window.clearTimeout(sliderReleaseTimerRef.current);
     sliderReleaseTimerRef.current = window.setTimeout(() => { draggingSliderRef.current = false; }, 120);
   };
-  const allowsAboveSliderMax = ["length", "width", "height", "outerDiameter", "innerDiameter", "starOuterSize", "starInnerSize", "crescentThickness", "honeycombCellSize", "honeycombWallThickness", "honeycombFrameWidth", "bentTubeSize", "bentTubeBendRadius"].includes(id) || id.endsWith("Length") || id.endsWith("Width");
+  // A cylinder's diameter and a cone's radii too (drucktipps3d forum: a cylinder of 198 mm was cut to 160).
+  const allowsAboveSliderMax = ["length", "width", "height", "diameter", "baseRadius", "topRadius", "outerDiameter", "innerDiameter", "starOuterSize", "starInnerSize", "crescentThickness", "honeycombCellSize", "honeycombWallThickness", "honeycombFrameWidth", "bentTubeSize", "bentTubeBendRadius"].includes(id) || id.endsWith("Length") || id.endsWith("Width");
   const isLength = propertyUsesLengthUnit(id);
   const accuracy = workspace.accuracy;
   // A position can be typed beyond the slider, on both sides (#425).
@@ -8164,10 +8724,10 @@ function ColorProperty({ label, value, hint, disabled, onChange, onReset, onInte
   );
 }
 
-function ToggleProperty({ label, value, area, disabled, onChange, onReset }: Omit<TogglePropertyConfig, "id" | "type"> & { disabled?: boolean; onReset?: () => void }) {
+function ToggleProperty({ label, value, area, sub, disabled, onChange, onReset }: Omit<TogglePropertyConfig, "id" | "type"> & { disabled?: boolean; onReset?: () => void }) {
   return (
-    <label className={area ? `check-property check-property-${area}` : "check-property"}>
-      <input type="checkbox" checked={value} disabled={disabled} onChange={(event) => onChange(event.currentTarget.checked)} />
+    <label className={`${area ? `check-property check-property-${area}` : "check-property"}${sub ? " check-property-sub" : ""}`}>
+      <input type="checkbox" role="switch" checked={value} disabled={disabled} onChange={(event) => onChange(event.currentTarget.checked)} />
       <span>{label}{onReset ? <PropertyResetButton onClick={onReset} /> : null}</span>
     </label>
   );
@@ -8524,7 +9084,16 @@ export function SelectionInspector({
         <div className="color-card" aria-label={t("inspector.shapeColor")} data-help-section-all="colorCard">
           <div className="color-card-header">
             <span>{t("inspector.color")}</span>
-            <span className="color-value">{sharedColor ? sharedColor.toUpperCase() : t("inspector.selectionMixedColors")}</span>
+            <HexColorField
+              color={sharedColor ?? undefined}
+              placeholder={t("inspector.selectionMixedColors")}
+              disabled={anyLocked}
+              onCommit={(color) => {
+                onSetColor(color);
+                rememberColor(color);
+              }}
+              onInteractionActiveChange={onInteractionActiveChange}
+            />
           </div>
           <div className="color-grid">
             {SOLID_COLORS.map((color) => (

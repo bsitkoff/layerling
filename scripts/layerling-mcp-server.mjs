@@ -100,6 +100,10 @@ async function callTool(name, args) {
       return bridgeCommand("list_objects", args);
     case "layerling_select_objects":
       return bridgeCommand("select_objects", args);
+    case "layerling_hide_others":
+      return bridgeCommand("hide_others", args);
+    case "layerling_rename_project":
+      return bridgeCommand("rename_project", args);
     case "layerling_delete_objects":
       return bridgeCommand("delete_objects", args);
     case "layerling_move_object":
@@ -197,7 +201,7 @@ async function callTool(name, args) {
     case "layerling_array_objects":
       return bridgeCommand("array_objects", args, 30000);
     case "layerling_apply_edge_treatment":
-      return bridgeCommand("apply_edge_treatment", args, 60000);
+      return bridgeCommand("apply_edge_treatment", args, 120000);
     case "layerling_inspect_errors":
       return bridgeCommand("inspect_errors", args);
     case "layerling_bundle_objects":
@@ -208,6 +212,12 @@ async function callTool(name, args) {
       return bridgeCommand("text_block", args, 30000);
     case "layerling_clear_history":
       return bridgeCommand("clear_history", args);
+    case "layerling_delete_history_steps":
+      return bridgeCommand("delete_history_steps", args);
+    case "layerling_list_backups":
+      return bridgeCommand("list_backups", args);
+    case "layerling_open_backup":
+      return bridgeCommand("open_backup", args, 60000);
     case "layerling_layer_icon":
       return bridgeCommand("layer_icon", args, 60000);
     case "layerling_reference_image":
@@ -260,6 +270,8 @@ async function callTool(name, args) {
       return bridgeCommand("restore_from_history", args);
     case "layerling_show_workplane":
       return bridgeCommand("show_workplane", args);
+    case "layerling_focus_mode":
+      return bridgeCommand("focus_mode", args);
     case "layerling_measurements":
       return bridgeCommand("measurements", args);
     case "layerling_measure_angle":

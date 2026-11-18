@@ -100,6 +100,8 @@ G 規格是符合 ISO 228-1 的平行惠氏管螺紋，常見於水、瓦斯、�
 
 {{ui:gear.rack}} 是半徑無窮大的齒輪：一根單側帶齒的條，使用漸開線齒時齒面是壓力角下的直線。寬度（沿 X）為齒數 × 齒距，齒距為 π × 模數，所以同模數的齒條可以首尾相接，每一端都落在齒槽中。長度（沿 Y）是齒條的厚度，可自由設定，只要齒與半公釐的條身放得下。齒朝前，即朝向主視圖的觀察者；視需要轉動齒條。相同模數的齒輪要在其上滾動，中心必須位於節線前方齒數 × 模數 / 2 處；節線在齒頂後方一個模數處，圓齒則為 0.6 個模數。齒圈與齒條有漸開線齒與圓齒兩種，沒有簡單齒；切換齒輪類型會保留模數。
 
+{{ui:gear.internal}} 和 {{ui:gear.rack}} 也有 {{ui:prop.helixAngle}}（起初為 0，即直齒），這樣就能與斜齒輪或人字齒輪配合運轉。給它們與該齒輪相同的角度，正負號也相同，而不是像兩個斜齒輪之間那樣取相反的角度。{{ui:prop.ringRackHerringbone}} 讓它們的齒在一半高度處折回，用於相同角度的人字齒輪。齒條保持原來的長度：傾斜的齒在兩端被切平。對於內齒圈，{{ui:prop.helixQuality}} 與斜齒輪一樣，決定扭轉畫得多細。邊緣工具和 STEP 匯出都把兩者作為精確實體處理，內齒圈的限制與下文的斜齒輪相同。
+
 邊緣工具與 STEP 匯出會把每個齒輪當作精確實體，漸開線齒面為平滑曲線。橢圓形輪廓上的斜齒輪仍是三角形網格，從約 31 齒起的漸開線斜齒輪也一樣。人字齒輪在這兩種情況下同樣仍是三角形網格。從約 31 齒起，這只適用於邊緣工具：STEP 匯出在任何齒數下都以精確實體寫出這種齒輪，非常大的齒輪最多需要約一分鐘。小齒限制了邊能倒圓的程度：簡單齒的齒輪直徑 30 mm、12 齒時，兩齒之間齒根處的平面只有約 0.65 mm 寬，所以全邊倒圓最多約 0.5 mm；傘齒輪頂端更小，最多約 0.4 mm。斜齒輪和人字齒輪的齒是傾斜的，會讓那個平面在斜邊上變窄：螺旋角相對齒輪高度越大，能容納的圓角越小。兩個平端面的邊可以倒圓，但只對這些邊倒角會在 CAD 核心中失敗；請改為倒圓，或以較小尺寸（例如 0.2 mm）對所有邊一起倒角。漸開線齒、螺旋角約 15 度以上（預設即如此）的人字齒輪不能一次對所有邊倒圓或倒角；請分別對兩端或兩半相接處的邊倒圓。
 
 ## 彈簧
@@ -114,11 +116,15 @@ G 規格是符合 ISO 228-1 的平行惠氏管螺紋，常見於水、瓦斯、�
 
 一個 {{ui:shape.bentTube}} 最多由十二段組成：一段直管，接著一個彎。每一段你設定 {{ui:prop.bentTubeSegmentLength}}、{{ui:prop.bentTubeBendAngle}}、{{ui:prop.bentTubeBendRadius}} 與 {{ui:prop.bentTubeRoll}}。正在編輯的那一段會以橘色亮起，方便你掌握順序。滾轉角為 0° 時在工作平面內彎曲，90° 時管子向上彎。輪廓可以是圓形、方形、六邊形或八邊形，內部同樣如此，也可以完全實心。如果管子撞到自己，layerling 會警告你。
 
+圓形截面設定{{ui:prop.outerDiameter}}，方形、六邊形或八邊形截面設定{{ui:prop.bentTubeAcrossFlats}}。內部截面相同時，還會顯示{{ui:prop.innerDiameter}}或{{ui:prop.bentTubeInnerAcrossFlats}}；輸入它，{{ui:prop.bentTubeWall}}會隨之調整。{{ui:prop.quality}}排在最前，位於普通管子顯示邊數的位置：它決定圓形截面有幾個角，以及彎曲部分分得多細。{{ui:prop.bentTubeBendAngle}}為 0° 的彎管就是直管，因此也可以用它做出方管、六角管或八角管。
+
 ## 放樣
 
 {{ui:shape.loft}} 把底部的一個輪廓接到頂部的另一個輪廓，就像 Fusion 的放樣：從一種直徑接到另一種直徑的軟管接頭、把方形風扇接到圓管上、向上逐漸變圓的支架。每一端你選擇 {{ui:prop.loftBottomOutline}} 與 {{ui:prop.loftTopOutline}}：{{ui:loft.round}}、帶 {{ui:prop.loftBottomCorner}} 的 {{ui:loft.rectangle}}，或帶角數的 {{ui:loft.polygon}}，再加上每一端的寬度、長度與高度。{{ui:prop.loftOffsetX}} 與 {{ui:prop.loftOffsetZ}} 把頂端向側面移動，做出傾斜過渡；底端留在原處。
 
 {{ui:prop.loftWall}} 把實體變成上下開口的管。兩端開口的橫向尺寸都比外形小一個壁厚；壁面傾斜處會略薄一些。把框架拖大，兩端也跟著變大，而圓角半徑與壁厚維持不變。
+
+{{ui:prop.loftTopWall}} 在有壁厚時為頂端設定單獨的壁厚：例如一個噴嘴，底部矩形處厚 3 公釐，頂部圓形處以 1 公釐結束。在你輸入自己的數值之前，它跟隨底部的壁厚。兩端之間壁厚均勻變化；在經過多個截面的過渡中，每個截面取與其高度相應的壁厚。
 
 {{ui:prop.loftSmooth}} 讓過渡變得平滑。為 0 時，側面從底部到頂部筆直延伸，像圓錐一樣。為 100 時，兩端先筆直向上，再以 S 曲線在中間改變尺寸：軟管接頭從窄管平滑地擴張到寬管，而不是像漏斗那樣斜張。中間的數值在兩者之間混合。平滑過渡可與 {{ui:prop.loftWall}}、扭轉、傾斜及側向偏移一起使用；帶壁的管兩端仍保持開口。它和直邊放樣一樣是精確實體，因此邊可以倒角與倒圓，但它由多個斷面構成，計算會稍久。
 
@@ -180,7 +186,9 @@ G 規格是符合 ISO 228-1 的平行惠氏管螺紋，常見於水、瓦斯、�
 
 {{ui:hinge.styleLiftOff}} 做出像許多門上那樣的可拆式鉸鏈：兩個鉸節，下方的帶著銷子一直到端部，上方的是可以從銷子上拔出的套筒，所以蓋子或門可以取下再掛回去。它總是兩個鉸節。它和其他樣式一樣平放整體列印；要直立列印、銷子朝上，就用 {{ui:inspector.separateParts}} 把它拆開，把帶銷的那件立在它的鉸節上，另一件立在它的套筒上：這樣兩件都不需要支撐。另一側用鏡像。在 {{ui:prop.hingeScrewHead}} 下，所有樣式都可選 {{ui:hinge.screwNut}}：在每個孔上方開一個六角螺帽槽，位於闔上時朝向另一片的那一面，這樣從下方鎖入的螺栓能固定；{{ui:hinge.screwCountersunkNut}} 把後片（帶銷的那片）做成沉頭，前片開螺帽槽。{{ui:prop.hingeNutWidth}} 是螺帽的對邊寬度；為 0 時依孔取值（M3 5.8 mm，M4 7.3 mm，含間隙）。槽深等於螺帽高度，但下面留 0.6 mm 的葉片，所以葉片越厚，螺帽嵌得越深。
 
-{{ui:prop.hingeStyle}}有三個選項：{{ui:hinge.stylePin}}、{{ui:prop.hingePinless}}（為自備銷留的孔）和{{ui:hinge.styleCone}}。選圓錐時，{{ui:prop.hingeConeSize}}決定圓錐從關節長出處的大小；圓錐越大越牢固，預設取能放下的最大值。帶圓錐的鉸鏈沒有銷也沒有孔，所以它的翼板可以和整個關節一樣厚：把{{ui:prop.hingeLeafThickness}}設為關節直徑，翼板就與關節齊平；這樣的鉸鏈最多開啟約 90°，因為厚翼板會相碰。
+{{ui:hinge.styleSnap}} 做出兩半分開列印、再喀一聲扣合的鉸鏈。後片的鉸節照常帶著銷子；前片的鉸節是卡夾，頂部開口，開在鉸鏈闔上時面對另一片的那一側。開口比銷子窄 {{ui:prop.hingeSnapGrip}} 所設的量，預設 0.3 mm，開口邊緣的 45° 倒角把銷子引進去。用 {{ui:inspector.separateParts}} 把鉸鏈拆開，兩半都照原樣平放列印，不需支撐：卡夾正好在孔需要搭橋的地方開口，銷子只跨過它的鉸節之間的短間隙。組裝時，把帶卡夾的一半按闔上的姿態放到銷子上，按下直到喀一聲卡入；之後它可以自由轉動，銷子周圍留有間隙（{{ui:prop.hingeClearance}}）。卡緊量越大越牢，但需要的力也越大：卡夾裂了就調小，兩半太容易脫開就調大。選 {{ui:hinge.leafRaised}} 時，只有前片在開口下方仍連著它的卡夾，才會被抬高。
+
+{{ui:prop.hingeStyle}}有五個選項：{{ui:hinge.stylePin}}、{{ui:prop.hingePinless}}（為自備銷留的孔）、{{ui:hinge.styleCone}}、{{ui:hinge.styleLiftOff}}和{{ui:hinge.styleSnap}}。選圓錐時，{{ui:prop.hingeConeSize}}決定圓錐從關節長出處的大小；圓錐越大越牢固，預設取能放下的最大值。帶圓錐的鉸鏈沒有銷也沒有孔，所以它的翼板可以和整個關節一樣厚：把{{ui:prop.hingeLeafThickness}}設為關節直徑，翼板就與關節齊平；這樣的鉸鏈最多開啟約 90°，因為厚翼板會相碰。
 
 要用螺絲固定鉸鏈，設定 {{ui:prop.hingeScrewHoles}}：沿軸最多六個孔，孔徑為你選擇的 {{ui:prop.hingeScrewDiameter}}。在 {{ui:prop.hingeScrewHead}} 下，它們預設為 {{ui:hinge.screwCountersunk}}，90° 用於沉頭螺絲，位於鉸鏈合上時朝向另一片的那一面，因此螺絲頭齊平；{{ui:hinge.screwStraight}} 則保持直孔。不設其他數值時，孔平均分配長度並位於每片的中間；{{ui:prop.hingeScrewSpacing}} 與 {{ui:prop.hingeScrewAcross}} 依中心距設定它們，例如為了對上你要替換的購買鉸鏈。每個孔到邊緣、鉸節與下一個孔之間都至少保留半毫米的片；放不下那麼多時就少放，欄位會說明。{{ui:prop.hingeCornerRadius}} 會把兩片的四個外角倒圓。無論有無銷軸，孔與圓角在 STEP 匯出與邊緣工具中都保持精確。
 
@@ -240,9 +248,17 @@ microSD 卡槽也是左邊緣的接頭，位於電路板下方（Zero 2 W 上在
 
 {{ui:shape.doubleCountersink}} 是兩面都倒角的孔，用於正面與背面都要整潔的板件。它在形狀庫裡沒有獨立項目：取用 {{ui:shape.countersink}}，並在其屬性中開啟 {{ui:prop.screwHoleBothSides}}（本身就是雙面錐形沉頭孔的實體已顯示該開關開啟）：兩端各有一個錐面張開到 {{ui:prop.screwHoleHead}}，中間是 {{ui:prop.screwHoleShaft}}。你照舊設定 {{ui:prop.screwHoleAngle}} 與 {{ui:prop.screwHoleLength}}。如果孔太短，容不下兩個完整的錐面，它們會以該角度在中央相接，桿部會比你設定的更寬：10 mm 的頭部、6 mm 的桿部、90° 與 2 mm 的長度，會形成兩個從 10 mm 收窄到 8 mm 的錐面。作為孔，它像其他孔一樣被推穿零件。
 
-把形狀設為孔，並與零件群組。讓它的頂端略高於頭部應貼合的表面，使沉頭孔開口乾淨。要為六角螺帽做沉頭孔，就用六邊的 {{ui:shape.polygon}} 當作孔。 在{{ui:prop.screwHoleSize}}中可選 M2 到 M30（錐形沉孔到 M20），軸徑（ISO 273 中等通孔）、頭部直徑以及深度或角度即依標準設定（DIN 974-1、ISO 15065），長度不變。對於六角柱，{{ui:prop.nutPocketSize}}依 ISO 4032 設定螺帽的對邊寬度和高度，並留 0.4 mm 列印餘量。
+把形狀設為孔，並與零件群組。讓它的頂端略高於頭部應貼合的表面，使沉頭孔開口乾淨。要為六角螺帽做沉頭孔，就用六邊的 {{ui:shape.polygon}} 當作孔。 在{{ui:prop.screwHoleSize}}中可選 M2 到 M30（錐形沉孔到 M20），軸徑（ISO 273 中等通孔）、頭部直徑以及深度或角度即依標準設定（DIN 974-1、ISO 15065），長度不變。對於六角柱，{{ui:prop.nutPocketSize}}依 ISO 4032 設定螺帽的對邊寬度和高度，並留 0.4 mm 列印餘量。 錐形沉孔也提供 ASME B18.6.1 的英制規格 #2 至 #14：它們的頭部為 82°，澳洲木螺絲販售時所用的 gauge 規格也是同樣的編號（6-gauge 就是 #6）。
 
 鑽出的盲孔底部不是平的，而是鑽頭尖端留下的錐形（Discussion #621）。{{ui:shape.counterbore}}、{{ui:shape.countersink}}以及設為孔的{{ui:shape.cylinder}}都可以這樣收尾：在{{ui:prop.holeBottom}}中選擇 90°、118°（常見麻花鑽）或 135° 的鑽尖，或選{{ui:holeBottom.drillPointOther}}，再在{{ui:prop.drillPointAngle}}中輸入 60° 到 150° 之間的角度。與圖面相同，深度——圓柱體的{{ui:prop.height}}、螺絲孔的{{ui:prop.screwHoleLength}}——只算到錐形開始的台階處；尖端在它下方，118° 時約為直徑的 0.3 倍，角度下方的一行會寫出具體多深。錐形與孔一樣寬，螺絲孔則與桿部一樣寬。{{ui:holeBottom.flat}}讓孔底保持原樣。實體圓柱體保留平的端面，貫通的雙面錐形沉頭孔也一樣。
+
+長孔讓零件在鎖緊螺絲前仍能稍微移動，方便對齊（Discussion #1531）。在{{ui:shape.counterbore}}、{{ui:shape.countersink}}或{{ui:shape.doubleCountersink}}上開啟{{ui:prop.screwHoleSlot}}：沉頭孔或錐面以及孔身會繞過長孔的兩端，並沿其兩側筆直延伸。{{ui:prop.screwHoleSlotLength}}決定延伸多長；起初與頭部一樣寬，沿寬度方向——要換方向就旋轉該孔。{{ui:prop.screwHoleHead}}和{{ui:prop.screwHoleSize}}只改變頭部，長孔保持不變。長孔沒有鑽尖，和圓孔一樣是精確實體。
+
+沉頭螺絲的頭部與表面齊平。若要沉得更深，可在{{ui:shape.countersink}}上設定{{ui:prop.screwHoleRecess}}（Discussion #1531）：錐面上方會多出一段與頭部同寬的直孔，深度為所設公釐數，{{ui:prop.screwHoleLength}}也包含這一段。{{ui:shape.doubleCountersink}}兩端都有這段直孔。設為 0 時頭部仍與表面齊平；長孔同樣適用，且仍是精確實體。
+
+要去掉沉孔邊緣的銳邊，在{{ui:shape.counterbore}}上設定{{ui:prop.screwHoleChamfer}}（Discussion #1632）：沉孔頂部隨之以 45 度向外展開這麼多毫米。倒角位於{{ui:prop.screwHoleHead}}之外，螺絲頭仍然放得下，並且它始終比{{ui:prop.screwHoleHeadDepth}}淺。設為 0 時邊緣保持原來的銳邊；長槽孔同樣可以使用，並且仍是精確實體。
+
+內六角圓柱頭螺絲按頭部下方的長度販售，沉頭螺絲按含頭部的長度販售。因此{{ui:shape.counterbore}}有第二個欄位 {{ui:prop.screwHoleLengthBelowHead}}（Discussion #1670）：在那裡輸入螺絲長度，會加上 {{ui:prop.screwHoleHeadDepth}} 得到 {{ui:prop.screwHoleLength}}。M3 × 12 的螺絲配 3.2 mm 的沉頭孔，得到長 15.2 mm 的孔。錐形沉頭孔仍只有一個長度。
 
 {{ui:shape.finishingWasher}}（一種裝飾墊圈，Discussion #1131）是放在沉頭或半沉頭螺絲下面的拱形墊圈，用於在木頭或蓋板上顯得整潔。它是實心件，底面平；從較低的邊緣起，拱頂升到座面，座面是承托螺絲頭的錐面，下面是孔。在 {{ui:prop.screwHoleSize}} 下選擇 M2 到 M20：孔是該規格的過孔，座面是該規格的沉頭孔，{{ui:prop.diameter}} 與 {{ui:prop.height}} 由此得出（M3：10.3 × 2.95 mm，M6：16.6 × 4.5 mm）。你也可以自己設定 {{ui:prop.diameter}}、{{ui:prop.height}}、{{ui:prop.centerHole}}、座面頂部的 {{ui:prop.screwHoleHead}} 及其 {{ui:prop.screwHoleAngle}}。它保持圓形，並且是精確實體，因此邊緣工具與 STEP 都能處理它。
 
