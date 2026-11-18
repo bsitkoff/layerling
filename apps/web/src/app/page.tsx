@@ -4123,7 +4123,7 @@ function Dashboard({
               <UpdatePreview update={update} currentVersion={LYL_CREATED_WITH_VERSION} />
             </aside>
           ) : null}
-          {welcome.hidden === false && !simpleMode ? (
+          {welcome.hidden === false && !simpleMode && !CLASSROOM_COPY ? (
             <DashboardWelcome open={(!hasProjects && !sharedTotal) || welcomeReopened} offline={offlineOk} onHide={welcome.hide} />
           ) : null}
           {/* Order follows what someone actually does: start something new,
@@ -4918,7 +4918,7 @@ function Dashboard({
               ) : null}
             </>
           )}
-          <AppFooter version={LYL_CREATED_WITH_VERSION} updateInfo={update} onShowWelcome={welcome.hidden && !simpleMode ? showWelcome : undefined} onShowAnnouncement={announcements.closedButActive && !simpleMode ? announcements.reopen : undefined} />
+          <AppFooter version={LYL_CREATED_WITH_VERSION} updateInfo={update} onShowWelcome={welcome.hidden && !simpleMode && !CLASSROOM_COPY ? showWelcome : undefined} onShowAnnouncement={announcements.closedButActive && !simpleMode ? announcements.reopen : undefined} />
         </section>
       </div>
 

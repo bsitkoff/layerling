@@ -17,7 +17,7 @@ The CourseWare side is tracked in the private CourseWare repo, issue #1540. Tuto
 | `components/AppFooter.tsx` | The embed's only link out: **Source** (AGPL-3.0 section 13) |
 | `app/courseware.css` | Source link style; empty ribbon sections hidden; a compact shape panel (small Solid/Hole card; no Wrap around a cylinder, Surface texture, texture mask or Save-as-default) so Length, Width and Height fit at 1366×768 |
 | `components/NewVersionNotice.tsx` | No "new version ready" notice inside a lesson |
-| `apps/web/src/lib/classroomCopy.ts` (+ one-line gates in `page.tsx`, `AppFooter.tsx`, `useAppUpdate.ts`, `useAnnouncements.ts`) | Classroom copy: no "newer version" banner or footer link, announcements, What's new cards or install/tablet hints on the start page; a footer line sends people to layerling.com for news instead |
+| `apps/web/src/lib/classroomCopy.ts` (+ one-line gates in `page.tsx`, `AppFooter.tsx`, `useAppUpdate.ts`, `useAnnouncements.ts`) | Classroom copy: no "newer version" banner or footer link, Welcome guide, announcements, What's new cards or install/tablet hints on the start page; a footer line sends people to layerling.com for news instead |
 | `apps/web/public/_headers`, `.assetsignore`, `wrangler.jsonc` | Cloudflare hosting |
 | `scripts/generate-service-worker.mjs` | Skips the two Cloudflare files in the offline cache |
 
