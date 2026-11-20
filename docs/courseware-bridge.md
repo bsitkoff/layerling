@@ -59,14 +59,14 @@ Binary fields are `ArrayBuffer`s; send them as transferables.
 |---|---|---|
 | `ready` | | The start page has loaded the stored designs. Send `init` after this. |
 | `opened` | `lessonKey`, `from`: `local` / `submission` / `starter` / `blank` / `loaded` / `review` | The lesson's design (or the review copy, with `lessonKey` `__review__`) is open. |
-| `submission` | `requestId`, `lyl`, `thumbnailPng` (or null), `threeMf` (or null), `designHash`, `objectCount`, `printCheck` | Answer to `request-submission`. |
+| `submission` | `requestId`, `lyl`, `thumbnailPng` (or null), `threeMf` (or null), `threeMfError?`, `designHash`, `objectCount`, `printCheck` | Answer to `request-submission`. |
 | `submission-error` | `requestId`, `code`: `empty` / `busy` / `failed`, `message` | Nothing to submit, the student is mid-action (or the history view is open), or the export failed. `message` is shown to the student as is. |
 | `error` | `message` | A file sent with `init` or `load` would not open. |
 
 Notes on `submission`:
 - `lyl` is saved **without undo history**, which keeps it small (about 110 KB for a simple design including the thumbnail).
 - `designHash` is a SHA-256 of the design's object graphs and asset hashes. It ignores the project name, ids and timestamps, so an unchanged design resubmitted gives the same hash, which CourseWare's unchanged-resubmission rule can use.
-- `threeMf` (only with `include3mf`) is the export window's 3MF: visible solids, holes cut, separated by colour. It is null when the export fails; the submission still goes through.
+- `threeMf` (only with `include3mf`) is the export window's 3MF: visible solids, holes cut, separated by colour. It is null when the export fails; the submission still goes through, and `threeMfError` says why in plain words.
 - `printCheck` (only with `checkPrint`) is the editor's own print check over every object: thin walls, floating pieces, small contact with the plate, overhangs at 45°, open meshes. CourseWare can show it as a warning for no-supports lessons.
 
 ## Storage in the browser

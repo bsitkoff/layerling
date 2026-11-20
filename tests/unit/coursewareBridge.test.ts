@@ -125,15 +125,15 @@ describe("the design hash of a submission", () => {
 
 describe("the 3MF of a submission", () => {
   it("is the exported file when the export works", async () => {
-    expect(await optionalThreeMf(async () => ({ base64: btoa("3mf") }))).toEqual(strToU8("3mf"));
+    expect(await optionalThreeMf(async () => ({ base64: btoa("3mf") }))).toEqual({ bytes: strToU8("3mf"), error: null });
   });
 
   it("is null, not a failed submission, when the export throws or returns nothing", async () => {
     const warn = console.warn;
     console.warn = () => {};
     try {
-      expect(await optionalThreeMf(async () => { throw new Error("mesh failed"); })).toBeNull();
-      expect(await optionalThreeMf(async () => ({}))).toBeNull();
+      expect(await optionalThreeMf(async () => { throw new Error("mesh failed"); })).toEqual({ bytes: null, error: "mesh failed" });
+      expect((await optionalThreeMf(async () => ({}))).bytes).toBeNull();
     } finally {
       console.warn = warn;
     }

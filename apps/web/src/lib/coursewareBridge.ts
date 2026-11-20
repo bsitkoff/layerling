@@ -120,6 +120,8 @@ export type CoursewareOutbound =
     lyl: ArrayBuffer;
     thumbnailPng: ArrayBuffer | null;
     threeMf: ArrayBuffer | null;
+    /** Why there is no 3MF when one was asked for and the export failed. */
+    threeMfError?: string;
     /** SHA-256 (hex) of the design itself, ignoring save times, so an unchanged design hashes the same. */
     designHash: string;
     objectCount: number;
@@ -277,12 +279,13 @@ function ownBuffer(bytes: Uint8Array): ArrayBuffer {
 
 /** The 3MF is a print convenience: if it can't be made, the design is still
  *  handed in (CourseWare marks the print "No print file") rather than failing. */
-export async function optionalThreeMf(exportMesh: () => Promise<unknown>): Promise<Uint8Array | null> {
+export async function optionalThreeMf(exportMesh: () => Promise<unknown>): Promise<{ bytes: Uint8Array | null; error: string | null }> {
   try {
-    return base64Bytes(await exportMesh());
+    return { bytes: base64Bytes(await exportMesh()), error: null };
   } catch (error) {
-    console.warn("CourseWare: 3MF export failed, handing in without it:", errorText(error));
-    return null;
+    const reason = errorText(error);
+    console.warn("CourseWare: 3MF export failed, handing in without it:", reason);
+    return { bytes: null, error: reason };
   }
 }
 
@@ -299,7 +302,8 @@ export async function answerSubmissionRequest(request: Extract<CoursewareInbound
     // No undo history in a submission: smaller files, and grading only needs the result.
     const lyl = base64Bytes(await runCommand("save_project", { history: 0 }));
     const { hash, thumbnail } = await designHashOfLyl(lyl);
-    const threeMf = request.include3mf ? await optionalThreeMf(() => runCommand("export_mesh", { format: "3mf" })) : null;
+    const exported = request.include3mf ? await optionalThreeMf(() => runCommand("export_mesh", { format: "3mf" })) : null;
+    const threeMf = exported?.bytes ?? null;
     let printCheck: unknown = null;
     if (request.checkPrint) {
       const ids = objects.map((object) => (isRecord(object) ? object.id : null)).filter((id): id is string => typeof id === "string");
@@ -309,7 +313,7 @@ export async function answerSubmissionRequest(request: Extract<CoursewareInbound
     const thumbnailBuffer = thumbnail ? ownBuffer(thumbnail) : null;
     const threeMfBuffer = threeMf ? ownBuffer(threeMf) : null;
     postToCourseware(
-      { type: "submission", requestId, lyl: lylBuffer, thumbnailPng: thumbnailBuffer, threeMf: threeMfBuffer, designHash: hash, objectCount: objects.length, printCheck },
+      { type: "submission", requestId, lyl: lylBuffer, thumbnailPng: thumbnailBuffer, threeMf: threeMfBuffer, ...(exported?.error ? { threeMfError: exported.error } : {}), designHash: hash, objectCount: objects.length, printCheck },
       [lylBuffer, ...(thumbnailBuffer ? [thumbnailBuffer] : []), ...(threeMfBuffer ? [threeMfBuffer] : [])],
     );
   } catch (error) {
