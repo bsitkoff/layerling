@@ -1,6 +1,6 @@
 import { strToU8, zipSync } from "fflate";
 import { afterEach, describe, expect, it } from "vitest";
-import { designHashOfLyl, parseCoursewareMessage } from "@/lib/coursewareBridge";
+import { designHashOfLyl, optionalThreeMf, parseCoursewareMessage } from "@/lib/coursewareBridge";
 import { COMMAND_SHORTCUTS } from "@/lib/commandKeywords";
 import { comboFromKeyPress } from "@/lib/customShortcuts";
 import { setSimpleModeLists, simpleModeHiddenToolOfKey, simpleModeKeepsMenuItem, simpleModeKeepsShape, simpleModeKeepsTool, SIMPLE_MODE_SHAPES, SIMPLE_MODE_TOOLS } from "@/lib/simpleMode";
@@ -120,5 +120,22 @@ describe("the design hash of a submission", () => {
     expect(first.hash).not.toBe(second.hash);
     expect(first.thumbnail).toEqual(png);
     expect(second.thumbnail).toBeNull();
+  });
+});
+
+describe("the 3MF of a submission", () => {
+  it("is the exported file when the export works", async () => {
+    expect(await optionalThreeMf(async () => ({ base64: btoa("3mf") }))).toEqual(strToU8("3mf"));
+  });
+
+  it("is null, not a failed submission, when the export throws or returns nothing", async () => {
+    const warn = console.warn;
+    console.warn = () => {};
+    try {
+      expect(await optionalThreeMf(async () => { throw new Error("mesh failed"); })).toBeNull();
+      expect(await optionalThreeMf(async () => ({}))).toBeNull();
+    } finally {
+      console.warn = warn;
+    }
   });
 });

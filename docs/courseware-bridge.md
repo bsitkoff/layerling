@@ -66,7 +66,7 @@ Binary fields are `ArrayBuffer`s; send them as transferables.
 Notes on `submission`:
 - `lyl` is saved **without undo history**, which keeps it small (about 110 KB for a simple design including the thumbnail).
 - `designHash` is a SHA-256 of the design's object graphs and asset hashes. It ignores the project name, ids and timestamps, so an unchanged design resubmitted gives the same hash, which CourseWare's unchanged-resubmission rule can use.
-- `threeMf` (only with `include3mf`) is the export window's 3MF: visible solids, holes cut, separated by colour.
+- `threeMf` (only with `include3mf`) is the export window's 3MF: visible solids, holes cut, separated by colour. It is null when the export fails; the submission still goes through.
 - `printCheck` (only with `checkPrint`) is the editor's own print check over every object: thin walls, floating pieces, small contact with the plate, overhangs at 45°, open meshes. CourseWare can show it as a warning for no-supports lessons.
 
 ## Storage in the browser

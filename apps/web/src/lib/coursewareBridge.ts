@@ -275,6 +275,17 @@ function ownBuffer(bytes: Uint8Array): ArrayBuffer {
     : bytes.slice().buffer;
 }
 
+/** The 3MF is a print convenience: if it can't be made, the design is still
+ *  handed in (CourseWare marks the print "No print file") rather than failing. */
+export async function optionalThreeMf(exportMesh: () => Promise<unknown>): Promise<Uint8Array | null> {
+  try {
+    return base64Bytes(await exportMesh());
+  } catch (error) {
+    console.warn("CourseWare: 3MF export failed, handing in without it:", errorText(error));
+    return null;
+  }
+}
+
 /** Packs the open design for CourseWare and posts it (or a submission-error) back. */
 export async function answerSubmissionRequest(request: Extract<CoursewareInbound, { type: "request-submission" }>) {
   const { requestId } = request;
@@ -288,7 +299,7 @@ export async function answerSubmissionRequest(request: Extract<CoursewareInbound
     // No undo history in a submission: smaller files, and grading only needs the result.
     const lyl = base64Bytes(await runCommand("save_project", { history: 0 }));
     const { hash, thumbnail } = await designHashOfLyl(lyl);
-    const threeMf = request.include3mf ? base64Bytes(await runCommand("export_mesh", { format: "3mf" })) : null;
+    const threeMf = request.include3mf ? await optionalThreeMf(() => runCommand("export_mesh", { format: "3mf" })) : null;
     let printCheck: unknown = null;
     if (request.checkPrint) {
       const ids = objects.map((object) => (isRecord(object) ? object.id : null)).filter((id): id is string => typeof id === "string");
